@@ -1,0 +1,39 @@
+--------------
+Basic Commands
+--------------
++myid                   - Display your Discord ID.
++idof <name>            - Display the Discord ID of the username (not nickname) provided.
++date                   - Display the current date.
++time                   - Display the current time.
++search <term>          - Search the web for the search term provided.
++meme <term>            - Find the freshest memes for the search term provided.
++toggle <value>         - Changes a boolean value inside ShevBot.
+
+-------------------------
+Keyword/Response Commands
+-------------------------
++count                  - Count the amount of keywords and responses found by ShevBot so far.
++found keywords         - List the keywords found so far.
++found responses        - List the responses found so far.
++refresh                - Refresh ShevBot's databases.
+
+--------------
+Voice Commands
+--------------
++voice join <chan>      - Join a specified voice channel on the current server.
++voice speak            - Say a random sound on the currently joined voice channel.
++voice leave            - Disconnect from the current voice channel.
+
+-----------------
+ShevMail Commands
+-----------------
++mail read              - Display all ShevMails addressed to you.
++mail write <id> <msg>  - Create a new ShevMail addressed to the Discord ID, with a message.
++mail clear             - Remove all ShevMails addressed to you.
+
+-----------------
+Reminder Commands
+-----------------
++reminder read          - View all reminders you have created.
++reminder write <msg>   - Store a new reminder with the message peovided.
++reminder clear         - Delete any reminders you have created.

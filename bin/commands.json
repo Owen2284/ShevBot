@@ -1,0 +1,31 @@
+{
+	
+	"date": {
+		"description": "Displays the system date of the machine running ShevBot.",
+		"parameters": "none",
+		"process": function()
+		},
+
+	"time": {},
+
+	"search": {},
+
+	"meme": {},
+
+	"toggle": {},
+
+	"refresh": {},
+
+	"count":{},
+
+	"found": {},
+
+	"voice": {},
+
+	"speak": {},
+
+	"shutup": {},
+
+	"end": {}
+
+}

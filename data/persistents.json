@@ -1,0 +1,15 @@
+{
+	"mail": [
+		{
+			"sender": "ShevBot",
+			"recipient": "ShevBot",
+			"message": "Hello World."
+		}
+	],
+	"reminders": [
+		{
+			"creator": "ShevBot",
+			"text": "Remember to remember!"
+		}
+	]
+}

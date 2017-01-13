@@ -1,6 +1,7 @@
 echo off
-title ShevBot
+cls
+title ShevBot v2
 echo "Running ShevBot.js"
-node ShevBot.js
+node main.js
 echo "Closing ShevBot.js"
 pause

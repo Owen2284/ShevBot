@@ -1,0 +1,11 @@
+2.1.0
+-----
+Save swears to file.
+
+Future
+------
+Improve command parsing (allow "" grouping)
+Shitposting command
+Flesh out debug console
+Add Persistents tools; shorten MAIL and REMINDER functions.
+Add timestamp/date to mails.

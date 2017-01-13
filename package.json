@@ -1,0 +1,31 @@
+{
+  "name": "shevbot",
+  "version": "2.0.0",
+  "description": "Discord bot by Owen Shevlin",
+  "main": "ShevBot.js",
+  "bin": {
+    "shevbot": "ShevBot-0.1.js"
+  },
+  "dependencies": {
+    "discord.js": "^11.0.0",
+    "node-opus": "^0.2.4"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Owen2284/ShevBot.git"
+  },
+  "keywords": [
+    "bot",
+    "discord"
+  ],
+  "author": "Owen Shevlin",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Owen2284/ShevBot/issues"
+  },
+  "homepage": "https://github.com/Owen2284/ShevBot#readme"
+}

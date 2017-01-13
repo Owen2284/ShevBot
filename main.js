@@ -13,7 +13,7 @@ https://discordapp.com/oauth2/authorize?client_id=210522625556873216&scope=bot
 
 // Details
 const details = {
-	versionNumber: "2.0.0",
+	versionNumber: "2.0.1",
 	repo: "https://github.com/Owen2284/ShevBot",
 	commandCharacter: "+",
 	dataDir: "data/",

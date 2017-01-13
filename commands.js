@@ -559,6 +559,18 @@ var commands = {
 		}
 	},
 
+	"SAY": {
+		params: "<message>",
+		description: "Makes me say something!",
+		category: "Social",
+		active: true,
+		complete: true,
+		visible: true,
+		process: function(bot, message, sender, channel, input, data, settings, details, commands) {
+			say("send", message, message.content.substring(5));
+		}
+	},
+
 	"TOPIC": {
 		params: "",
 		description: "Sets a random topic for the current channel.",
@@ -568,6 +580,18 @@ var commands = {
 		visible: true,
 		process: function(bot, message, sender, channel, input, data, settings, details, commands) {}
 	},
+
+	"LOG": {
+		params: "<message>",
+		description: "Logs a message to the command prompt.",
+		category: "Debug",
+		active: true,
+		complete: true,
+		visible: false,
+		process: function(bot, message, sender, channel, input, data, settings, details, commands) {
+			cmd("[log] " + message.content.substring(5));
+		}
+	},	
 
 	"DEBUG": {
 		params: "",

@@ -13,7 +13,7 @@ https://discordapp.com/oauth2/authorize?client_id=210522625556873216&scope=bot
 
 // Details
 const details = {
-	versionNumber: "2.0.1",
+	versionNumber: "2.0.2",
 	repo: "https://github.com/Owen2284/ShevBot",
 	commandCharacter: "+",
 	dataDir: "data/",
@@ -46,7 +46,8 @@ var data = {
 // Settings
 var settings = {
 	debug: false,
-	allowLooping: false
+	allowLooping: false,
+	initialGreet: true
 };
 
 const greetingChannels = [
@@ -73,7 +74,7 @@ var bot = new Discord.Client();
 // Ready event handler, greets allowed channels.
 bot.on("ready", function() {
 
-	if (!settings.debug) {
+	if (!settings.debug && settings.initialGreet) {
 
 		var channelArr = bot.channels.array();
 		var testChannel = channelArr[0];
@@ -88,6 +89,8 @@ bot.on("ready", function() {
 				}
 			}
 		}
+
+		settings.initialGreet = false;
 
 	}
 

@@ -137,6 +137,8 @@ var commands = {
 				settings.allowLooping = !settings.allowLooping;
 			} else if(input[1].toUpperCase() === "DEBUG") {
 				settings.debug = !settings.debug;
+			} else if (input[1].toUpperCase() === "GREET") {
+				settings.initialGreet = !settings.initialGreet;
 			} else {
 				say("send", message, "Please specify a variable to toggle.")
 			}

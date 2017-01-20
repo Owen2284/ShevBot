@@ -1,6 +1,6 @@
-2.1.0
+2.2.0
 -----
-Save swears to file.
+
 
 Future
 ------
@@ -9,3 +9,4 @@ Shitposting command
 Flesh out debug console
 Add Persistents tools; shorten MAIL and REMINDER functions.
 Add timestamp/date to mails.
+Add multiple greetings.

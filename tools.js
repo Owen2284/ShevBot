@@ -161,12 +161,22 @@ function objectInfo(object) {
 	}
 }
 
+function readJSON(filepath) {
+	return JSON.parse(readFile(filepath));
+}
+
+function writeJSON(filepath, data) {
+	writeFile(filepath, JSON.stringify(data, null, "\t"));
+}
+
 exports.say = say;
 exports.cmd = cmd;
 exports.getDate = getDate;
 exports.getTime = getTime;
 exports.readFile = readFile;
 exports.writeFile = writeFile;
+exports.readJSON = readJSON;
+exports.writeJSON = writeJSON;
 exports.countOccurrences = occurrences;
 exports.terminate = terminate;
 exports.waitFor = waitFor;

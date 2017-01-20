@@ -13,7 +13,7 @@ https://discordapp.com/oauth2/authorize?client_id=210522625556873216&scope=bot
 
 // Details
 const details = {
-	versionNumber: "2.0.2",
+	versionNumber: "2.1.0",
 	repo: "https://github.com/Owen2284/ShevBot",
 	commandCharacter: "+",
 	dataDir: "data/",
@@ -22,12 +22,13 @@ const details = {
 }
 
 // Packages.
-var Tools = require("./tools.js");
-var Discord = require("discord.js");
+const Tools = require("./tools.js");
+const Discord = require("discord.js");
+var emojiList = require("emojis-list");
 
 // Tools.
-var readFile = Tools.readFile
-var writeFile = Tools.writeFile
+var readJSON = Tools.readJSON
+var writeJSON = Tools.writeJSON
 var say = Tools.say
 var cmd = Tools.cmd
 
@@ -36,10 +37,10 @@ var commands = require("./commands.js").shevbotCommands;
 
 // Files
 var data = {
-	messages: JSON.parse(readFile(details.dataDir + "messages.json")), 
-	found: JSON.parse(readFile(details.dataDir + "found.json")), 
-	persistents: JSON.parse(readFile(details.dataDir + "persistents.json")),
-	swearCounter: 0,
+	messages: readJSON(details.dataDir + "messages.json"), 
+	found: readJSON(details.dataDir + "found.json"), 
+	persistents: readJSON(details.dataDir + "persistents.json"),
+	counters: readJSON(details.dataDir + "counters.json"),
 	currentStreamDispatcher: null
 };
 
@@ -113,6 +114,7 @@ bot.on("message", function(message) {
 			evaluateCommand(message, sender, channel, command);
 		} else {
 			evaluateChat(message, sender, channel, raw);
+			evaluateReactions(message);
 			evaluateSwears(message, sender, channel, raw);
 		}
 
@@ -194,7 +196,7 @@ function evaluateChat(message, sender, channel, text) {
 						say(command, message, send);
 						if (data.found["keywords"].indexOf(keywords[j]) == -1) {data.found["keywords"].push(keywords[j]);}
 						if (data.found["responses"].indexOf(send) == -1) {data.found["responses"].push(send);}
-						writeFile(details.dataDir + "found.json", JSON.stringify(data.found, null, "\t"));
+						writeJSON(details.dataDir + "found.json", data.found);
 						// Force advance to next pair.
 						j = keywords.length;
 					}
@@ -228,12 +230,33 @@ function evaluateSwears(message, sender, channel, text) {
 		// Counts the found swears.
 		if(swearsFound.length > 0) {
 			for(swe = 0; swe < swearsFound.length; swe++) {
-				data.swearCounter += Tools.countOccurrences(text.toUpperCase(), swearsFound[swe], true);
+				data.counters["swears"] += Tools.countOccurrences(text.toUpperCase(), swearsFound[swe], true);
 			}
-			say("send", message, "Current swear counter: " + data.swearCounter);
+			say("send", message, "Current swear counter: " + data.counters["swears"]);
+			writeJSON(details.dataDir + "counters.json", data.counters);
 		}
 	} catch (e) {
 		cmd("[swr] Swear evaluation failed, error encountered:");	
+		console.log(e.stack);
+	}
+
+}
+
+function evaluateReactions(message) {
+
+	try {
+		var reactChance = 0.05;
+		var q = Math.random();
+
+		if (q < reactChance) {
+			var emojiNumber = Math.floor(Math.random() * emojiList.length);
+			message.react(emojiList[emojiNumber]);
+			++data.counters["reacts"];
+			writeJSON(details.dataDir + "counters.json", data.counters);
+			cmd("[rct] Reacted to message.");
+		}
+	} catch (e) {
+		cmd("[rct] Reaction failed, error encountered:");	
 		console.log(e.stack);
 	}
 

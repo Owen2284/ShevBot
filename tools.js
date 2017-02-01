@@ -169,6 +169,21 @@ function writeJSON(filepath, data) {
 	writeFile(filepath, JSON.stringify(data, null, "\t"));
 }
 
+function requireSafely(module) {
+	try {
+		var temp = require(module);
+		cmd("[mod] Module \"" + module + "\" successfully loaded.");
+		return temp;
+	} catch(e) {
+		cmd("[mod] Module \"" + module + "\" not found.");
+		return null;
+	}
+}
+
+function isLink(text) {
+	return 0.0;
+}
+
 exports.say = say;
 exports.cmd = cmd;
 exports.getDate = getDate;
@@ -185,3 +200,5 @@ exports.arrayToString = arrayToString;
 exports.getResponse = getResponse;
 exports.determineMatch = determineMatch;
 exports.objectInfo = objectInfo;
+exports.requireSafely = requireSafely;
+exports.isLink = isLink;

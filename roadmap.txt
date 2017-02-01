@@ -1,12 +1,21 @@
 2.2.0
 -----
-
-
-Future
-------
+Add Shevbot themes and greetings.
+THEME command added - switches themes.
 Improve command parsing (allow "" grouping)
-Shitposting command
+
+Future Features
+---------------
 Flesh out debug console
 Add Persistents tools; shorten MAIL and REMINDER functions.
 Add timestamp/date to mails.
-Add multiple greetings.
+
+Future Commands
+---------------
+SHITPOST
+YOUTUBE
+TWITTER
+REDDIT
+TOPIC
+SILENCE
+THEME

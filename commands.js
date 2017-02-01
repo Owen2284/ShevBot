@@ -583,6 +583,48 @@ var commands = {
 		process: function(bot, message, sender, channel, input, data, settings, details, commands) {}
 	},
 
+	"YOUTUBE": {
+		params: "<channel name>",
+		description: "Fetches the most recent video from a Youtube channel.",
+		category: "Web",
+		active: false,
+		complete: false,
+		visible: true,
+		process: function(bot, message, sender, channel, input, data, settings, details, commands) {}
+	},
+
+	"TWITTER": {
+		params: "<twitter user tag / hashtag>",
+		description: "Fetches the most recent tweet from the specified twitter user or hashtag.",
+		category: "Web",
+		active: false,
+		complete: false,
+		visible: true,
+		process: function(bot, message, sender, channel, input, data, settings, details, commands) {}
+	},
+
+	"REDDIT": {
+		params: "<subreddit name>",
+		description: "Fetches the top post of the specified subreddit.",
+		category: "Web",
+		active: false,
+		complete: false,
+		visible: true,
+		process: function(bot, message, sender, channel, input, data, settings, details, commands) {}
+	},
+
+	"SHITPOST": {
+		params: "<username / nickname>",
+		description: "Generates a random message based on the user's previous messages.",
+		category: "Social",
+		active: false,
+		complete: false,
+		visible: true,
+		process: function(bot, message, sender, channel, input, data, settings, details, commands) {}
+	},
+
+// ==================================================================================================================================
+
 	"LOG": {
 		params: "<message>",
 		description: "Logs a message to the command prompt.",

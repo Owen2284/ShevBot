@@ -3,7 +3,7 @@
 ShevBot
 Created on 3rd August 2016
 
-Current Version: v2.0.0
+Current Version: v2.1.1
 
 Backend for my Discord bot, ShevBot.
 
@@ -13,7 +13,7 @@ https://discordapp.com/oauth2/authorize?client_id=210522625556873216&scope=bot
 
 // Details
 const details = {
-	versionNumber: "2.1.0",
+	versionNumber: "2.1.1",
 	repo: "https://github.com/Owen2284/ShevBot",
 	commandCharacter: "+",
 	dataDir: "data/",
@@ -21,10 +21,11 @@ const details = {
 	musicDir: "music/"
 }
 
-// Packages.
+// Modules.
 const Tools = require("./tools.js");
-const Discord = require("discord.js");
-var emojiList = require("emojis-list");
+Tools.cmd("[mod] Module \"./tools.js\" successfully loaded.");
+const Discord = Tools.requireSafely("discord.js");
+const EmojiList = Tools.requireSafely("emojis-list");
 
 // Tools.
 var readJSON = Tools.readJSON
@@ -33,7 +34,7 @@ var say = Tools.say
 var cmd = Tools.cmd
 
 // Commands.
-var commands = require("./commands.js").shevbotCommands;
+var commands = Tools.requireSafely("./commands.js").shevbotCommands;
 
 // Files
 var data = {
@@ -249,8 +250,8 @@ function evaluateReactions(message) {
 		var q = Math.random();
 
 		if (q < reactChance) {
-			var emojiNumber = Math.floor(Math.random() * emojiList.length);
-			message.react(emojiList[emojiNumber]);
+			var emojiNumber = Math.floor(Math.random() * EmojiList.length);
+			message.react(EmojiList[emojiNumber]);
 			++data.counters["reacts"];
 			writeJSON(details.dataDir + "counters.json", data.counters);
 			cmd("[rct] Reacted to message.");

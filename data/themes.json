@@ -1,0 +1,26 @@
+[
+	{
+		"name": "ShevBot",
+		"image": "avatars/default.jpg",
+		"greeting": "ShevBot v#VERSION ready to serve!",
+		"change": "Understood, activating ShevBot!"
+	},
+	{
+		"name": "MemeBot",
+		"image": "avatars/sosig.png",
+		"greeting": "Tome for memes, with MemeBot.",
+		"change": "Oh shit, here come dat MemeBot."
+	},
+	{
+		"name": "SpookyBot",
+		"image": "avatars/spook.png",
+		"greeting": "SpookyBot v#VERSION rises from the ashes of depair!",
+		"change": "FOOLISH MORTALS! You have awoken SpookyBot!"
+	},
+	{
+		"name": "DnDBot",
+		"image": "avatars/default.jpg",
+		"greeting": "todo: write a thing here",
+		"change": "todo: write a thing here"
+	}
+]

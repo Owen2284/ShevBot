@@ -26,5 +26,11 @@
 			"creator": "ShevBot",
 			"text": "Remember to remember!"
 		}
-	]
+	],
+	"currentTheme": {
+		"name": "DnDBot",
+		"image": "avatars/default.png",
+		"greeting": "todo: write a thing here",
+		"change": "todo: write a thing here"
+	}
 }

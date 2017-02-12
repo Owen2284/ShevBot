@@ -3,12 +3,23 @@
 Add Shevbot themes and greetings.
 THEME command added - switches themes.
 Improve command parsing (allow "" grouping)
+Implement new cmd feature, with message types
+
+To test: REFRESH, THEME
 
 Future Features
 ---------------
 Flesh out debug console
 Add Persistents tools; shorten MAIL and REMINDER functions.
 Add timestamp/date to mails.
+Fix THEME bug, ensure change mirrored across guilds
+Add isLink command
+Add check to ensure custom .js files compile before launching.
+Fix REFRESH command, allow command updating.
+Add link archive.
+Add command memory, so command can store command specific data (found keysponses, mail, reminders, link archives, etc).
+Fix command splitting to allow odd characters (e.g. &).
+Catch crash for not finding image file when switching themes.
 
 Future Commands
 ---------------

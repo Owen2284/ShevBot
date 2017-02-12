@@ -4,12 +4,34 @@ var fs = require("fs");
 function say(inType, inMessage, inText) {
 	if (inType === "send") {inMessage.channel.sendMessage(inText);} 
 	else if (inType === "reply") {inMessage.reply(inText);} 
-	else {cmd("[whoops] Invalid response type for bot message.");}
+	else {cmd("whoops", "Invalid response type for bot message.");}
 }
 
 // General command for console logging.
-function cmd(cText) {
-	console.log("[" + getTime() + "] " + cText);
+function cmd(cType, cText) {
+	// Constant determining how long type should be.
+	const BUFFER_LENGTH = 7;
+	// Creating initial string.
+	var cString = "[" + getTime() + "] ["
+
+	// Buffing length if type is too short.
+	if (cType.length < BUFFER_LENGTH) {
+		cString += cType;
+		for (var i = 0; i < BUFFER_LENGTH - cType.length; ++i) {cString += " ";}
+	} 
+	// Shortening type if too long.
+	else if (cType.length > BUFFER_LENGTH) {
+		cString += cType.substring(0, 7);
+	} 
+	// Or just add it.
+	else {
+		cString += cType;
+	}
+
+	// Close off string and log the message.
+	cString += "] " + cText;	
+	console.log(cString);
+
 }
 
 // Gets the time for the TIME command.
@@ -33,7 +55,7 @@ function getDate() {
 // Loads in a file at the specified path.
 function readFile(path) {
 	var temp = fs.readFileSync(path, "utf8");
-	if(typeof temp === "string") {cmd("[i/o] " + path + " read successfully.");}
+	if(typeof temp === "string") {cmd("files", path + " read successfully.");}
 	return temp;
 }
 
@@ -41,9 +63,9 @@ function readFile(path) {
 function writeFile(path, fileString) {
 	if (typeof fileString === "string") {
 		fs.writeFileSync(path, fileString);
-		cmd("[i/o] " + path + " written successfully.");
+		cmd("files", path + " written successfully.");
 	} else {
-		cmd("[i/o] [whoops] Invalid string for writeFile.");
+		cmd("whoops", "Invalid string for writeFile.");
 	}
 }
 
@@ -108,7 +130,7 @@ function determineMatch(inCat, inKeyword, inCheck) {
 		if(inCheck.includes(inKeyword))  {return true;} 
 		else {return false;}
 	} else {
-		consoleMessage("[whoops] Invalid category for determineMatch.");
+		cmd("whoops", "Invalid category for determineMatch.");
 		return false;
 	}
 }
@@ -152,12 +174,12 @@ function getAllMethods(object) {
 
 function objectInfo(object) {
 	if (object != undefined) {
-		cmd("[dbg] Info on " + object + ":");
-		cmd("[dbg] Class: " + object.constructor.name)
-		cmd("[dbg] Properties: " + getAllProperties(object));
-		cmd("[dbg] Methods: " + getAllMethods(object));
+		cmd("debug", "Info on " + object + ":");
+		cmd("debug", "Class: " + object.constructor.name)
+		cmd("debug", "Properties: " + getAllProperties(object));
+		cmd("debug", "Methods: " + getAllMethods(object));
 	} else {
-		cmd("[dbg] Object is undefined,");
+		cmd("debug", "Object is undefined,");
 	}
 }
 
@@ -172,10 +194,11 @@ function writeJSON(filepath, data) {
 function requireSafely(module) {
 	try {
 		var temp = require(module);
-		cmd("[mod] Module \"" + module + "\" successfully loaded.");
+		cmd("module", "Module \"" + module + "\" successfully loaded.");
 		return temp;
 	} catch(e) {
-		cmd("[mod] Module \"" + module + "\" not found.");
+		console.log(e);
+		cmd("module", "Module \"" + module + "\" not found.");
 		return null;
 	}
 }
@@ -183,6 +206,113 @@ function requireSafely(module) {
 function isLink(text) {
 	return 0.0;
 }
+
+// Used by THEME command to update bot appearance.
+function changeThemeAllChannels(bot, data) {
+
+	// Fetching data and preparing structures.
+	var channelArr = bot.channels.array();
+	var changedGuilds = [];
+
+	// Updating nicknames of guilds.
+	for (var i in channelArr) {
+		if (channelArr[i].type == "text" || channelArr[i].type == "voice") {
+			var currentGuild = channelArr[i].guild;
+			// Only changes things if guild hasn't been processed yet.
+			if (changedGuilds.indexOf(currentGuild.id) <= -1) {
+				currentGuild.member(bot.user).setNickname(data.persistents["currentTheme"]["name"]);
+				changedGuilds.push(currentGuild.id);
+			}
+		}
+	}
+
+	// Updating avatar.
+	bot.user.setAvatar("./" + data.persistents["currentTheme"]["image"]);
+
+	// Notifying console.
+	cmd("themes", "Theme changed to " + data.persistents["currentTheme"]["name"] + ".");
+
+}
+
+// Command for splitting input into command array, with respect for speech marks.
+function splitTextIntoCommand(inText) {
+
+	// Defining the return variable.
+	var returnedCommand = [];
+
+	// Checking if any splitting needs to be done at all.
+	if (occurrences(inText, " ", false) <= 0) {
+		returnedCommand.push(inText);
+		return returnedCommand;
+	}
+
+	// Declaring loop variables.
+	var pointer = 0;
+	var numSpeechMarks = occurrences(inText, "\"", false);
+	var commandSegment = "";
+	var withinSpeechMarks = false;
+	var allowRunning = true;
+
+	// Main loop.
+	while (allowRunning) {
+
+		// Get current character.
+		var currentChar = inText.substring(pointer, pointer+1);
+
+		// Continue adding characters to the 
+		if (withinSpeechMarks || currentChar !== " ") {
+			if (currentChar != "\"") {
+				commandSegment += currentChar;
+			} else {
+				withinSpeechMarks == !withinSpeechMarks;
+			}
+		} 
+
+		// Space detected; store command segment in command array.
+		else {
+			// Add part of command to the array, only if segment is valid.
+			if (commandSegment.length > 0) {
+				returnedCommand.push(commandSegment);
+			}
+			// Reset command segment.
+			commandSegment = "";
+		}
+
+		// Move to next character.
+		++pointer
+
+		// Check if pointer is beyond the end of the string.
+		if (pointer >= inText.length) {
+			// Add part of command to the array, only if segment is valid.
+			if (commandSegment.length > 0) {
+				returnedCommand.push(commandSegment);
+			}
+			// Reset command segment.
+			commandSegment = "";
+			// Terminate loop.
+			allowRunning = false;
+		}
+
+	}
+
+	return returnedCommand;
+
+}
+
+// Command for splitting input into command array, with respect for speech marks.
+// http://stackoverflow.com/questions/4031900/split-a-string-by-whitespace-keeping-quoted-segments-allowing-escaped-quotes
+function splitTextIntoCommandStolenFromStackOverflow(raw) {
+	// Split command initially, with respect to quotes.
+	var initialCommand = raw.match(/\w+|"(?:\\"|[^"])+"/g);
+	var finalCommand = [];
+	for (var i in initialCommand) {
+		var currentSegment = initialCommand[i].replace(/\"/g, "").trim();
+		if (currentSegment.length > 0) {
+			finalCommand.push(currentSegment);
+		}
+	}
+	return finalCommand;
+}	
 
 exports.say = say;
 exports.cmd = cmd;
@@ -202,3 +332,6 @@ exports.determineMatch = determineMatch;
 exports.objectInfo = objectInfo;
 exports.requireSafely = requireSafely;
 exports.isLink = isLink;
+exports.changeTheme = changeThemeAllChannels;
+exports.commandSplit = splitTextIntoCommandStolenFromStackOverflow;
+exports.commandSplitOld = splitTextIntoCommand;

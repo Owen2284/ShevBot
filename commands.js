@@ -74,7 +74,7 @@ var commands = {
 				say("send", message, helpString);
 
 			} else {
-				cmd("[HELP] Non-typical help execution.");	
+				cmd("command", "Non-typical help execution.");	
 			}
 
 		}
@@ -161,9 +161,15 @@ var commands = {
 				if (commandObject.active) {coms -= 1;}
 			}
 
-			// Read in new things.
-			messages = JSON.parse(Tools.readFile(details.dataDir + "messages.json"));
-			commands = require("./commands.js").shevbotCommands;
+			// Read in new keywords and responses.
+			messages = JSON.parse(Tools.readFile(details.dataDir + "keysponses.json"));
+
+			// Replace commands in the parameter object with the new commands.
+			var newCommands = Tools.requireSafely("./commands.js").shevbotCommands;
+			for (var key in newCommands) {
+				var newCommObj = newCommands[key];
+				commands[key] = newCommObj;
+			}
 
 			// Count new things.
 			keys += Tools.countMessages(data.messages, "keywords");
@@ -175,7 +181,7 @@ var commands = {
 
 			// Output counts.
 			say("send", message, "Databases and commands refreshed:\n" + 
-				//coms + " new commands!\n" +
+				coms + " new commands!\n" +
 				keys + " new keywords!\n" + 
 				resp + " new responses!");
 		}
@@ -364,7 +370,7 @@ var commands = {
 									}
 								}
 								if (joined) {
-									cmd("[vce] Joined voice channel \"" + joinedName + "\".");
+									cmd("voice", "Joined voice channel \"" + joinedName + "\".");
 									say("send", message, "Okay, I'll speak on the voice channel \"" + joinedName + "\"!");
 								} else {
 									say("send", message, "Sorry, I couldn't find a voice channel called \"" + targetChannelRaw + "\" on this server...");
@@ -375,7 +381,7 @@ var commands = {
 						} else if (bot.voiceConnections.array().length == 1) {
 							say("send", message, "Sorry, I'm already speaking on \"" + bot.voiceConnections.array()[0].channel.name + "\".");
 						} else {
-							cmd("[whoops] ShevBot is currently on > 1 voice channel. This is bad.");
+							cmd("voice", "ShevBot is currently on > 1 voice channel. This is bad.");
 						} break;
 					case "SWITCH":
 						say("send", message, "Sorry, I haven't had that command programmed in yet!");
@@ -384,12 +390,12 @@ var commands = {
 							if (data.currentStreamDispatcher != null) {data.currentStreamDispatcher.end(); data.currentStreamDispatcher == null;}
 							var currentChannel = bot.voiceConnections.array()[0].channel;
 							currentChannel.leave();
-							cmd("[vce] Left voice channel \"" + currentChannel.name + "\".");
+							cmd("voice", "Left voice channel \"" + currentChannel.name + "\".");
 							say("send", message, "I have stopped taking on the voice channel \"" + currentChannel.name + "\".");
 						} else if(bot.voiceConnections.array().length == 0) {
 							say("send", message, "Sorry, I'm not speaking on a voice channel at the moment.");
 						} else {
-							cmd("[whoops] ShevBot is currently on > 1 voice channel. This is bad.");
+							cmd("whoops", "ShevBot is currently on > 1 voice channel. This is bad.");
 						} break;
 					case "SPEAK":
 						if (bot.voiceConnections.array().length == 1) {
@@ -399,11 +405,11 @@ var commands = {
 							var soundToPlayDir = details.soundDir + soundToPlay;
 							if (data.currentStreamDispatcher != null) {data.currentStreamDispatcher.end(); data.currentStreamDispatcher == null;}
 							data.currentStreamDispatcher = currentConnection.playFile(soundToPlayDir, {volume:"0.25"});
-							cmd("[spk] Playing \"" + soundToPlay + "\"");
+							cmd("voice", "Playing \"" + soundToPlay + "\"");
 						} else if(bot.voiceConnections.array().length == 0) {
 							say("send", message, "Sorry, I'm not speaking on a voice channel at the moment.");
 						} else {
-							cmd("[whoops] ShevBot is attempting to speak on more than one channel. Stopping speak request.");
+							cmd("whoops", "ShevBot is attempting to speak on more than one channel. Stopping speak request.");
 						} break;
 					default:
 						say("send", message, "The " + details.commandCharacter + "voice command needs another argument after it, such as \"join\"  or \"leave\".");
@@ -437,7 +443,7 @@ var commands = {
 						if (myMails.length <= 0) {
 							say("reply", message, "you have no messages to read.");
 						} else {
-							var responseText = "you have " + myMails.text + " messages:\n";
+							var responseText = "you have " + myMails.length + " messages:\n";
 							for (var i in myMails) {
 								responseText += "\n\tFrom: " + myMails[i]["sender"] + "\n\tMessage: " + myMails[i]["message"] + "\n";
 							}
@@ -573,6 +579,56 @@ var commands = {
 		}
 	},
 
+	"THEME": {
+		params: "<theme name>",
+		description: "Lists ShevBot themes, or changes the theme when a theme's name is provided.",
+		category: "Cosmetic",
+		active: true,
+		complete: true,
+		visible: true,
+		process: function(bot, message, sender, channel, input, data, settings, details, commands) {
+			// Change theme to specified theme.
+			if (input.length > 1) {
+				var themeName = input[1];
+				var found = false;
+				for (var i in data.themes) {
+					var themeObj = data.themes[i];
+					if (themeObj["name"].toUpperCase() === themeName.toUpperCase()) {
+						if (data.persistents["currentTheme"]["name"].toUpperCase() !== themeName.toUpperCase()) {
+							data.persistents["currentTheme"] = themeObj;
+							Tools.changeTheme(bot, data);
+							Tools.writeFile(details.dataDir + "persistents.json", JSON.stringify(data.persistents, null, "\t"));
+						}
+						say("send", message, data.persistents["currentTheme"]["change"]);
+						found = true;
+					}
+				}
+				if (!found) {say("send", message, "Sorry, but ShevBot has no \"" + themeName + "\" theme.");}
+			} 
+			// Displays a list of all themes.
+			else {
+				var themesString = "Available ShevBot themes: ";
+				for (var i in data.themes) {
+					if (i>0) {themesString += ", ";}
+					var themeObj = data.themes[i];
+					themesString += themeObj.name;
+				}
+				themesString += ".";
+				say("send", message, themesString);
+			}
+		}
+	},
+
+	"SILENCE": {
+		params: "",
+		description: "",
+		category: "Social",
+		active: false,
+		complete: false,
+		visible: true,
+		process: function(bot, message, sender, channel, input, data, settings, details, commands) {}
+	},
+
 	"TOPIC": {
 		params: "",
 		description: "Sets a random topic for the current channel.",
@@ -661,7 +717,7 @@ var commands = {
 		complete: true,
 		visible: false,
 		process: function(bot, message, sender, channel, input, data, settings, details, commands) {
-			Tools.say("send", message, "Test complete!");
+			say("send", message, "Test complete!");
 		}
 	}
 

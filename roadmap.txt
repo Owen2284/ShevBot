@@ -1,32 +1,50 @@
-2.2.0
------
-Add Shevbot themes and greetings.
-THEME command added - switches themes.
-Improve command parsing (allow "" grouping)
-Implement new cmd feature, with message types
+Older Versions
+---
+<TO FILL IN>
 
-To test: REFRESH, THEME
+2.0.0 - Overhaul Update
+-----
+<TO FILL IN>
+
+2.1.0 - ??? (Reactions maybe?)
+-----
+<TO FILL IN>
+
+2.2.0 - Themed Update
+-----
+New command: THEME - Change ShevBot's appearance and greeting between various themes.
+Internal: improved command parsing (now allows "" grouping).
+Internal: implemented new cmd function, message types specifiable and columning added.
+
+2.3.0 - Social Update
+-----
+New command: YOUTUBE
+New command: REDDIT
+New command: TWITTER
+New command: TOPIC
+New command: SILENCE
+New command: ARCHIVE
+New evaluation type: Links
+Internal: Added isLink command.
+Internal: Added command memory, so commands can store command specific data (found keysponses, mail, reminders, link archives, etc) without need for multiple JSON files.
+
 
 Future Features
 ---------------
 Flesh out debug console
 Add Persistents tools; shorten MAIL and REMINDER functions.
 Add timestamp/date to mails.
-Fix THEME bug, ensure change mirrored across guilds
-Add isLink command
 Add check to ensure custom .js files compile before launching.
 Fix REFRESH command, allow command updating.
-Add link archive.
 Add command memory, so command can store command specific data (found keysponses, mail, reminders, link archives, etc).
 Fix command splitting to allow odd characters (e.g. &).
 Catch crash for not finding image file when switching themes.
+Allow users to create themes
 
 Future Commands
 ---------------
 SHITPOST
-YOUTUBE
-TWITTER
-REDDIT
-TOPIC
-SILENCE
-THEME
+
+TO TEST
+-------
+REFRESH - Check commands can be updated.

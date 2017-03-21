@@ -154,15 +154,15 @@ var commands = {
 		visible: true,
 		process: function(bot, message, sender, channel, input, data, settings, details, commands) {
 			// Count number of current things.
-			var keys = Tools.countMessages(data.messages, "keywords") * -1;
-			var resp = Tools.countMessages(data.messages, "responses") * -1;
+			var keys = Tools.countKeysponses(data.chat["keysponses"], "keywords") * -1;
+			var resp = Tools.countKeysponses(data.chat["keysponses"], "responses") * -1;
 			var coms = 0; for (var i in commands) {
 				var commandObject = commands[i];
 				if (commandObject.active) {coms -= 1;}
 			}
 
 			// Read in new keywords and responses.
-			messages = JSON.parse(Tools.readFile(details.dataDir + "keysponses.json"));
+			data.chat["keysponses"] = Tools.readJSON(details.dataDir + "chat.json")["keysponses"];
 
 			// Replace commands in the parameter object with the new commands.
 			var newCommands = Tools.requireSafely("./commands.js").shevbotCommands;
@@ -172,8 +172,8 @@ var commands = {
 			}
 
 			// Count new things.
-			keys += Tools.countMessages(data.messages, "keywords");
-			resp += Tools.countMessages(data.messages, "responses");
+			keys += Tools.countKeysponses(data.chat["keysponses"], "keywords");
+			resp += Tools.countKeysponses(data.chat["keysponses"], "responses");
 			for (var i in commands) {
 				var commandObject = commands[i];
 				if (commandObject.active) {coms += 1;}
@@ -195,7 +195,7 @@ var commands = {
 		complete: true,
 		visible: true,
 		process: function(bot, message, sender, channel, input, data, settings, details, commands) {
-			say("send", message, "Keywords found: " + data.found["keywords"].length + "/" + Tools.countMessages(data.messages, "keywords") + ".\nResponses found: " + data.found["responses"].length + "/" + Tools.countMessages(data.messages, "responses") + ".");
+			say("send", message, "Keywords found: " + data.commands["FOUND"]["keywords"].length + "/" + Tools.countKeysponses(data.chat["keysponses"], "keywords") + ".\nResponses found: " + data.commands["FOUND"]["responses"].length + "/" + Tools.countKeysponses(data.chat["keysponses"], "responses") + ".");
 		}
 	},
 
@@ -208,11 +208,11 @@ var commands = {
 		visible: true,
 		process: function(bot, message, sender, channel, input, data, settings, details, commands) {
 			if(input.length > 1 && input[1].toUpperCase() === "KEYWORDS") {
-				say("send", message, "All keywords found: \n" + Tools.arrayToString(data.found["keywords"], "\n"));
+				say("send", message, "All keywords found: \n" + Tools.arrayToString(data.commands["FOUND"]["keywords"], "\n"));
 			} else if(input.length > 1 && input[1].toUpperCase() === "RESPONSES") {
-				say("send", message, "All responses found: \n" + Tools.arrayToString(data.found["responses"], "\n"));
+				say("send", message, "All responses found: \n" + Tools.arrayToString(data.commands["FOUND"]["responses"], "\n"));
 			} else {
-				say("send", message, "Please enter either \"keywords\" or \"responses\" after \"" + settings.commandCharacter + "found\".");
+				say("send", message, "Please enter either \"keywords\" or \"responses\" after \"" + details.commandCharacter + "found\".");
 			}
 		}
 	},
@@ -346,7 +346,7 @@ var commands = {
 		description: "Operates ShevBot's voice capabilities.",
 		category: "Voice",
 		active: true,
-		complete: false,
+		complete: true,
 		visible: true,
 		process: function(bot, message, sender, channel, input, data, settings, details, commands) {
 			if (input.length > 1) {
@@ -387,7 +387,7 @@ var commands = {
 						say("send", message, "Sorry, I haven't had that command programmed in yet!");
 					case "LEAVE":
 						if (bot.voiceConnections.array().length == 1) {
-							if (data.currentStreamDispatcher != null) {data.currentStreamDispatcher.end(); data.currentStreamDispatcher == null;}
+							if (settings.currentStreamDispatcher != null) {settings.currentStreamDispatcher.end(); settings.currentStreamDispatcher == null;}
 							var currentChannel = bot.voiceConnections.array()[0].channel;
 							currentChannel.leave();
 							cmd("voice", "Left voice channel \"" + currentChannel.name + "\".");
@@ -403,8 +403,8 @@ var commands = {
 							var soundFileNames = fs.readdirSync(details.soundDir);
 							var soundToPlay = soundFileNames[Math.floor((Math.random() * soundFileNames.length))];
 							var soundToPlayDir = details.soundDir + soundToPlay;
-							if (data.currentStreamDispatcher != null) {data.currentStreamDispatcher.end(); data.currentStreamDispatcher == null;}
-							data.currentStreamDispatcher = currentConnection.playFile(soundToPlayDir, {volume:"0.25"});
+							if (settings.currentStreamDispatcher != null) {settings.currentStreamDispatcher.end(); settings.currentStreamDispatcher == null;}
+							settings.currentStreamDispatcher = currentConnection.playFile(soundToPlayDir, {volume:"0.25"});
 							cmd("voice", "Playing \"" + soundToPlay + "\"");
 						} else if(bot.voiceConnections.array().length == 0) {
 							say("send", message, "Sorry, I'm not speaking on a voice channel at the moment.");
@@ -429,7 +429,7 @@ var commands = {
 		complete: true,
 		visible: true,
 		process: function(bot, message, sender, channel, input, data, settings, details, commands) {
-			var allMails = data.persistents["mail"];
+			var allMails = data.commands["MAIL"]["mails"];
 			if (input.length > 1) {
 				switch(input[1].toUpperCase()) {
 					case "READ":
@@ -462,7 +462,7 @@ var commands = {
 							}
 							if (idfound) {
 								allMails.push({"sender":sender.username,"recipient":recipientid,"message":mailBody});
-								Tools.writeFile(details.dataDir + "persistents.json", JSON.stringify(data.persistents, null, "\t"));
+								Tools.writeJSON(details.dataDir + "commands.json", data.commands);
 								say("reply", message, "mail sent!");
 							} else {
 								say("send", message, "Discord ID provided does not match any user on this server.");
@@ -486,7 +486,7 @@ var commands = {
 								allMails.splice(allMails.indexOf(myMails[ma]), 1);
 							}
 							say("reply", message, "I have deleted any mails that were stored for you.");
-							Tools.writeFile(details.dataDir + "persistents.json", JSON.stringify(data.persistents, null, "\t"));
+							Tools.writeJSON(details.dataDir + "commands.json", data.commands);
 						} else {
 							say("reply", message, "you have no messages to clear.");
 						}
@@ -509,7 +509,7 @@ var commands = {
 		complete: true,
 		visible: true,
 		process: function(bot, message, sender, channel, input, data, settings, details, commands) {
-			var allRems = data.persistents["reminders"];
+			var allRems = data.commands["REMINDER"]["reminders"];
 			if (input.length > 1) {
 				switch(input[1].toUpperCase()) {
 					case "READ":
@@ -534,7 +534,7 @@ var commands = {
 						if (input.length >= 3) { 
 							var remainderBody = message.content.substring(input[0].length + input[1].length + 3);
 							allRems.push({"creator":sender.id,"text":remainderBody});
-							Tools.writeFile(details.dataDir + "persistents.json", JSON.stringify(data.persistents, null, "\t"));
+							Tools.writeJSON(details.dataDir + "commands.json", data.commands);
 							say("reply", message, "reminder created!");
 						} else if (input.length == 2) {
 							say("send", message, "Please include a reminder to save!");
@@ -552,7 +552,7 @@ var commands = {
 							for (var ra in myRems) {
 								allRems.splice(allRems.indexOf(myRems[ra]), 1);
 							}
-							Tools.writeFile(details.dataDir + "persistents.json", JSON.stringify(data.persistents, null, "\t"));
+							Tools.writeJSON(details.dataDir + "commands.json", data.commands);
 							say("reply", message, "I have deleted any reminders you had saved.");
 						} else {
 							say("reply", message, "you have no reminders to clear.");
@@ -573,7 +573,7 @@ var commands = {
 		category: "Social",
 		active: true,
 		complete: true,
-		visible: true,
+		visible: false,
 		process: function(bot, message, sender, channel, input, data, settings, details, commands) {
 			say("send", message, message.content.substring(5));
 		}
@@ -591,15 +591,15 @@ var commands = {
 			if (input.length > 1) {
 				var themeName = input[1];
 				var found = false;
-				for (var i in data.themes) {
-					var themeObj = data.themes[i];
+				for (var i in data.commands["THEME"]["availableThemes"]) {
+					var themeObj = data.commands["THEME"]["availableThemes"][i];
 					if (themeObj["name"].toUpperCase() === themeName.toUpperCase()) {
-						if (data.persistents["currentTheme"]["name"].toUpperCase() !== themeName.toUpperCase()) {
-							data.persistents["currentTheme"] = themeObj;
+						if (data.commands["THEME"]["currentTheme"]["name"].toUpperCase() !== themeName.toUpperCase()) {
+							data.commands["THEME"]["currentTheme"] = themeObj;
 							Tools.changeTheme(bot, data);
-							Tools.writeFile(details.dataDir + "persistents.json", JSON.stringify(data.persistents, null, "\t"));
+							Tools.writeJSON(details.dataDir + "commands.json", data.commands);
 						}
-						say("send", message, data.persistents["currentTheme"]["change"]);
+						say("send", message, data.commands["THEME"]["currentTheme"]["change"]);
 						found = true;
 					}
 				}
@@ -608,9 +608,9 @@ var commands = {
 			// Displays a list of all themes.
 			else {
 				var themesString = "Available ShevBot themes: ";
-				for (var i in data.themes) {
+				for (var i in data.commands["THEME"]["availableThemes"]) {
 					if (i>0) {themesString += ", ";}
-					var themeObj = data.themes[i];
+					var themeObj = data.commands["THEME"]["availableThemes"][i];
 					themesString += themeObj.name;
 				}
 				themesString += ".";
@@ -621,12 +621,27 @@ var commands = {
 
 	"SILENCE": {
 		params: "",
-		description: "",
+		description: "Prevents a user from speaking for 5 minutes.",
 		category: "Social",
 		active: false,
 		complete: false,
 		visible: true,
 		process: function(bot, message, sender, channel, input, data, settings, details, commands) {}
+	},
+
+	"NICKNAME": {
+		params: "",
+		description: "Randomises a person's nickname.",
+		category: "Social",
+		active: false,
+		complete: false,
+		visible: true,
+		process: function(bot, message, sender, channel, input, data, settings, details, commands) {
+			var Moniker = Tools.requireSafely("moniker")
+			var nameGen = Moniker.generator([Moniker.adjective, Moniker.noun]);
+			var newNickName = nameGen.choose();
+			
+		}
 	},
 
 	"TOPIC": {
@@ -636,7 +651,9 @@ var commands = {
 		active: false,
 		complete: false,
 		visible: true,
-		process: function(bot, message, sender, channel, input, data, settings, details, commands) {}
+		process: function(bot, message, sender, channel, input, data, settings, details, commands) {
+
+		}
 	},
 
 	"YOUTUBE": {
@@ -689,7 +706,7 @@ var commands = {
 		complete: true,
 		visible: false,
 		process: function(bot, message, sender, channel, input, data, settings, details, commands) {
-			cmd("[log] " + message.content.substring(5));
+			cmd("log", message.content.substring(5));
 		}
 	},	
 

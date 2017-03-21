@@ -3,7 +3,7 @@
 ShevBot
 Created on 3rd August 2016
 
-Current Version: v2.1.1
+Current Version: v2.3.0
 
 Backend for my Discord bot, ShevBot.
 
@@ -13,7 +13,7 @@ https://discordapp.com/oauth2/authorize?client_id=210522625556873216&scope=bot
 
 // Details
 const details = {
-	versionNumber: "2.2.0",
+	versionNumber: "2.3.0",
 	repo: "https://github.com/Owen2284/ShevBot",
 	commandCharacter: "+",
 	dataDir: "data/",
@@ -31,6 +31,7 @@ const EmojiList = Tools.requireSafely("emojis-list");
 const readJSON = Tools.readJSON;
 const writeJSON = Tools.writeJSON;
 const say = Tools.say;
+const pm = Tools.pm;
 const cmd = Tools.cmd;
 const commandSplit = Tools.commandSplit;
 
@@ -39,39 +40,17 @@ var commands = Tools.requireSafely("./commands.js").shevbotCommands;
 
 // Files
 var data = {
-	messages: readJSON(details.dataDir + "keysponses.json"), 
-	found: readJSON(details.dataDir + "found.json"), 
-	persistents: readJSON(details.dataDir + "persistents.json"),
-	counters: readJSON(details.dataDir + "counters.json"),
-	themes: readJSON(details.dataDir + "themes.json"),
-	currentStreamDispatcher: null
+	chat: readJSON(details.dataDir + "chat.json"), 
+	commands: readJSON(details.dataDir + "commands.json")
 };
 
 // Settings
 var settings = {
 	debug: false,
 	allowLooping: false,
-	initialGreet: true
+	initialGreet: true,
+	currentStreamDispatcher: null	
 };
-
-const greetingChannels = [
-	"BOT"
-];
-
-const swears = [
-	"FUCK", 
-	"SHIT",
-	"CUNT", 
-	"DICK", 
-	"TWAT", 
-	"ARSE",
-	"PISS",
-	"COCK",
-	"WANK",
-	"SLAG",
-	"WHORE",
-	"NIGGA"
-];
 
 // Creating bot.
 var bot = new Discord.Client();
@@ -82,19 +61,22 @@ bot.on("ready", function() {
 	if (!settings.debug && settings.initialGreet) {
 
 		var channelArr = bot.channels.array();
-		var greetingString = data.persistents["currentTheme"]["greeting"].replace("#VERSION", details.versionNumber);
+		var greetingString = data.commands["THEME"]["currentTheme"]["greeting"].replace("#VERSION", details.versionNumber);
 		
 		for (var i in channelArr) {
 			var currentChannel = channelArr[i];
 			if (currentChannel.constructor.name === "TextChannel") {
-				for (var j in greetingChannels) {
-					if (currentChannel.name.toUpperCase() === greetingChannels[j]) {
+				for (var j in data.chat["greetings"]["channelsToGreet"]) {
+					if (currentChannel.name.toUpperCase() === data.chat["greetings"]["channelsToGreet"][j]) {
 						currentChannel.sendMessage(greetingString);
+						++data.chat["greetings"]["counter"];
 						cmd("greet", "Channel \"" + currentChannel.name + "\" greeted.");
 					}
 				}
 			}
 		}
+
+		writeJSON(details.dataDir + "chat.json", data.chat);
 
 		settings.initialGreet = false;
 
@@ -110,6 +92,7 @@ bot.on("message", function(message) {
 	var raw = message.content;
 	var input = raw.toUpperCase();
 	var isCommand = input.substring(0, 1) === details.commandCharacter;	
+	var isLink = Tools.isLink(raw);
 	var isBot = sender.bot;
 	
 	if(!isBot || settings.allowLooping) {
@@ -117,9 +100,12 @@ bot.on("message", function(message) {
 		if (isCommand) {
 			var command = commandSplit(raw); command[0] = command[0].replace(details.commandCharacter, "");
 			evaluateCommand(message, sender, channel, command);
+		} else if (isLink){
+			evaluateLink(message, sender, channel, raw);
 		} else {
-			evaluateChat(message, sender, channel, raw);
-			evaluateReactions(message);
+			evaluateMessage(message, sender, channel, raw);
+			evaluateKeysponses(message, sender, channel, raw);
+			evaluateReactions(message, sender, channel, raw);
 			evaluateSwears(message, sender, channel, raw);
 		}
 
@@ -129,8 +115,8 @@ bot.on("message", function(message) {
 
 // Internal event handlers. 
 bot.on("disconnected", function() {cmd("disconnect", "Disconnected! Shutting down..."); process.exit(1);});
-bot.on("warn", function(m) {cmd("warning", m.toString())});
-bot.on("error", function(m) {cmd("error", m.toString())});
+bot.on("warn", function(m) {cmd("warning", m.toString());});
+bot.on("error", function(m) {cmd("error", m.toString());});
 bot.on("debug", function(m) {if (settings.debug) {cmd("debug", m.toString())}});
 bot.on("voiceSpeaking", function() {if (settings.debug) {cmd("warning", "Speech detected.");}});
 
@@ -171,7 +157,31 @@ function evaluateCommand(message, sender, channel, command) {
 
 }
 
-function evaluateChat(message, sender, channel, text) {
+function evaluateLink(message, sender, channel, text) {
+
+	try {
+		Tools.archiveAdd(sender.username, text, message.createdTimestamp, "links", details);
+		cmd("links", "Link archived.");
+	} catch (e) {
+		cmd("links", "Execution failed, error encountered:");
+		console.log(e.stack);
+	}
+
+}
+
+function evaluateMessage(message, sender, channel, text) {
+
+	try {
+		Tools.archiveAdd(sender.username, text, message.createdTimestamp, "messages", details);
+		cmd("message", "Message archived.");
+	} catch (e) {
+		cmd("message", "Execution failed, error encountered:");
+		console.log(e.stack);
+	}
+
+}
+
+function evaluateKeysponses(message, sender, channel, text) {
 
 	try {
 		// Loop through all categories of messages.
@@ -179,7 +189,7 @@ function evaluateChat(message, sender, channel, text) {
 		for (cat = 0; cat < allCategories.length; cat++) {
 
 			// Get category from JSON.
-			var category = data.messages[allCategories[cat]];
+			var category = data.chat["keysponses"][allCategories[cat]];
 
 			// Loop through all keyword-response pairs in the category.
 			for (i = 0; i < category.length; i++) {
@@ -199,9 +209,9 @@ function evaluateChat(message, sender, channel, text) {
 						cmd("keyword", "Keyword match: " + keywords[j]);
 						send = Tools.getResponse(responses);
 						say(command, message, send);
-						if (data.found["keywords"].indexOf(keywords[j]) == -1) {data.found["keywords"].push(keywords[j]);}
-						if (data.found["responses"].indexOf(send) == -1) {data.found["responses"].push(send);}
-						writeJSON(details.dataDir + "found.json", data.found);
+						if (data.commands["FOUND"]["keywords"].indexOf(keywords[j]) == -1) {data.commands["FOUND"]["keywords"].push(keywords[j]);}
+						if (data.commands["FOUND"]["responses"].indexOf(send) == -1) {data.commands["FOUND"]["responses"].push(send);}
+						writeJSON(details.dataDir + "commands.json", data.commands);
 						// Force advance to next pair.
 						j = keywords.length;
 					}
@@ -225,9 +235,9 @@ function evaluateSwears(message, sender, channel, text) {
 	try {
 		// Determines swears in the message.
 		var swearsFound = [];
-		for(swe = 0; swe < swears.length; swe++) {
-			if(text.toUpperCase().includes(swears[swe])){
-				swearsFound.push(swears[swe]);
+		for(swe = 0; swe < data.chat["swears"]["swearlist"].length; swe++) {
+			if(text.toUpperCase().includes(data.chat["swears"]["swearlist"][swe])){
+				swearsFound.push(data.chat["swears"]["swearlist"][swe]);
 				cmd("swear", "Swear detected.");
 			}
 		}
@@ -235,10 +245,10 @@ function evaluateSwears(message, sender, channel, text) {
 		// Counts the found swears.
 		if(swearsFound.length > 0) {
 			for(swe = 0; swe < swearsFound.length; swe++) {
-				data.counters["swears"] += Tools.countOccurrences(text.toUpperCase(), swearsFound[swe], true);
+				data.chat["swears"]["counter"] += Tools.countOccurrences(text.toUpperCase(), swearsFound[swe], true);
 			}
-			say("send", message, "Current swear counter: " + data.counters["swears"]);
-			writeJSON(details.dataDir + "counters.json", data.counters);
+			say("send", message, "Current swear counter: " + data.chat["swears"]["counter"]);
+			writeJSON(details.dataDir + "chat.json", data.chat);
 		}
 	} catch (e) {
 		cmd("swear", "Swear evaluation failed, error encountered:");	
@@ -247,7 +257,7 @@ function evaluateSwears(message, sender, channel, text) {
 
 }
 
-function evaluateReactions(message) {
+function evaluateReactions(message, sender, channel, text) {
 
 	try {
 		var reactChance = 0.05;
@@ -256,8 +266,9 @@ function evaluateReactions(message) {
 		if (q < reactChance) {
 			var emojiNumber = Math.floor(Math.random() * EmojiList.length);
 			message.react(EmojiList[emojiNumber]);
-			++data.counters["reacts"];
+			++data.chat["reacts"]["counter"];
 			cmd("react", "Reacted to message.");
+			writeJSON(details.dataDir + "chat.json", data.chat);
 		}
 	} catch (e) {
 		cmd("react", "Reaction failed, error encountered:");	

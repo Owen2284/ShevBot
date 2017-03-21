@@ -7,12 +7,16 @@ function say(inType, inMessage, inText) {
 	else {cmd("whoops", "Invalid response type for bot message.");}
 }
 
+function pm(user, text) {
+	user.sendMessage(text);
+}
+
 // General command for console logging.
 function cmd(cType, cText) {
 	// Constant determining how long type should be.
 	const BUFFER_LENGTH = 7;
 	// Creating initial string.
-	var cString = "[" + getTime() + "] ["
+	var cString = "[" + getTime() + "] [";
 
 	// Buffing length if type is too short.
 	if (cType.length < BUFFER_LENGTH) {
@@ -55,7 +59,7 @@ function getDate() {
 // Loads in a file at the specified path.
 function readFile(path) {
 	var temp = fs.readFileSync(path, "utf8");
-	if(typeof temp === "string") {cmd("files", path + " read successfully.");}
+	//if(typeof temp === "string") {cmd("files", path + " read successfully.");}
 	return temp;
 }
 
@@ -63,7 +67,7 @@ function readFile(path) {
 function writeFile(path, fileString) {
 	if (typeof fileString === "string") {
 		fs.writeFileSync(path, fileString);
-		cmd("files", path + " written successfully.");
+		//cmd("files", path + " written successfully.");
 	} else {
 		cmd("whoops", "Invalid string for writeFile.");
 	}
@@ -92,7 +96,7 @@ function waitFor(millis) {
 }
 
 // Counts the data in the responses or keyword JSONs when using the COUNT command.
-function countMessages(jsonFile, fieldToCount) {
+function countKeysponses(jsonFile, fieldToCount) {
 	var n = 0;
 	var toCount = jsonFile["fullMatches"];
 	for (i = 0; i < toCount.length; i++) {
@@ -184,11 +188,25 @@ function objectInfo(object) {
 }
 
 function readJSON(filepath) {
-	return JSON.parse(readFile(filepath));
+	try {
+		var jsonData = JSON.parse(readFile(filepath));
+		cmd("files", filepath + " read and parsed successfully.");
+		return jsonData;
+	} catch (e) {
+		cmd("files", "Error reading/parsing \"" + filepath + "\", the following error occured:");		
+		console.log(e);
+		return null;
+	}
 }
 
 function writeJSON(filepath, data) {
-	writeFile(filepath, JSON.stringify(data, null, "\t"));
+	try{
+		writeFile(filepath, JSON.stringify(data, null, "\t"));
+		cmd("files", filepath + " written successfully.");
+	} catch (e) {
+		cmd("files", "Error writing \"" + filepath + "\", the following error occured:");		
+		console.log(e);
+	}
 }
 
 function requireSafely(module) {
@@ -204,7 +222,8 @@ function requireSafely(module) {
 }
 
 function isLink(text) {
-	return 0.0;
+	var potentialLink = text.trim();
+	return (potentialLink.length >= 5 && occurrences(potentialLink, " ", false) <= 0 && occurrences(potentialLink, ".", false) >= 1);
 }
 
 // Used by THEME command to update bot appearance.
@@ -220,17 +239,17 @@ function changeThemeAllChannels(bot, data) {
 			var currentGuild = channelArr[i].guild;
 			// Only changes things if guild hasn't been processed yet.
 			if (changedGuilds.indexOf(currentGuild.id) <= -1) {
-				currentGuild.member(bot.user).setNickname(data.persistents["currentTheme"]["name"]);
+				currentGuild.member(bot.user).setNickname(data.commands["THEME"]["currentTheme"]["name"]);
 				changedGuilds.push(currentGuild.id);
 			}
 		}
 	}
 
 	// Updating avatar.
-	bot.user.setAvatar("./" + data.persistents["currentTheme"]["image"]);
+	bot.user.setAvatar("./" + data.commands["THEME"]["currentTheme"]["image"]);
 
 	// Notifying console.
-	cmd("themes", "Theme changed to " + data.persistents["currentTheme"]["name"] + ".");
+	cmd("themes", "Theme changed to " + data.commands["THEME"]["currentTheme"]["name"] + ".");
 
 }
 
@@ -314,7 +333,59 @@ function splitTextIntoCommandStolenFromStackOverflow(raw) {
 	return finalCommand;
 }	
 
+// Command for archiving a message into the archive file.
+function archiveAdd(username, str, timestamp, type, details) {
+	if (type == "messages" || type == "links") {
+		var archive = readJSON(details.dataDir + "archives.json");
+		var item = {
+			"user": username,
+			"message": str,
+			"timestamp": timestamp
+		}
+		archive[type].push(item);
+		writeJSON(details.dataDir + "archives.json", archive);
+	} else {
+		cmd("whoops", "Invalid archive type for archiveAdd() - \"" + type + "\".");
+	}
+}
+
+// Command for retrieving a whole list of archive data from a specified category.
+function archiveGetByCategory(type) {
+	if (type == "messages" || type == "links") {
+		var archive = readJSON(details.dataDir + "archives.json");
+		return archive[type];
+	} else {
+		cmd("whoops", "Invalid archive type for archiveGet() - \"" + type + "\".");
+	}
+} 
+
+// Command for retrieving a partial list of archive data based on id the data in the specified field matches the parameter data.
+function archiveGetByField(type, field, data) {
+	if (type == "messages" || type == "links") {
+		var archive = archiveGetByCategory(type);
+		var returnArray = [];
+		for (var i in archive) {
+			var archiveObject = archive[i];
+			if (archiveObject[field] == data) {
+				returnArray.push(archiveObject);
+			}
+		}
+		return returnArray;	
+	} else {
+		cmd("whoops", "Invalid archive type for archiveGet() - \"" + type + "\".");
+	}
+}
+
+// Retrieves a user object that has the name or nickname provided from the specified guild.
+function getUserFromGuildViaNameOrNickname(guild, name) {
+	var allUsers = guild.members.array();
+	for (var i in allUsers) {
+		
+	}
+}
+
 exports.say = say;
+exports.pm = pm;
 exports.cmd = cmd;
 exports.getDate = getDate;
 exports.getTime = getTime;
@@ -325,7 +396,7 @@ exports.writeJSON = writeJSON;
 exports.countOccurrences = occurrences;
 exports.terminate = terminate;
 exports.waitFor = waitFor;
-exports.countMessages = countMessages;
+exports.countKeysponses = countKeysponses;
 exports.arrayToString = arrayToString;
 exports.getResponse = getResponse;
 exports.determineMatch = determineMatch;
@@ -335,3 +406,7 @@ exports.isLink = isLink;
 exports.changeTheme = changeThemeAllChannels;
 exports.commandSplit = splitTextIntoCommandStolenFromStackOverflow;
 exports.commandSplitOld = splitTextIntoCommand;
+exports.archiveAdd = archiveAdd;
+exports.archiveGetByCategory = archiveGetByCategory;
+exports.archiveGetByField = archiveGetByField;
+exports.getUserFromGuild = getUserFromGuildViaNameOrNickname;

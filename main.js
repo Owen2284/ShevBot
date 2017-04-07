@@ -23,6 +23,7 @@ const details = {
 
 // Modules.
 const Tools = require("./tools.js");
+Tools.cmd("boot", "ShevBot launched.");
 Tools.cmd("module", "Module \"./tools.js\" successfully loaded.");
 const Discord = Tools.requireSafely("discord.js");
 const EmojiList = Tools.requireSafely("emojis-list");
@@ -114,7 +115,7 @@ bot.on("message", function(message) {
 });
 
 // Internal event handlers. 
-bot.on("disconnected", function() {cmd("disconnect", "Disconnected! Shutting down..."); process.exit(1);});
+bot.on("disconnected", function() {cmd("disconnect", "Disconnected! Shutting down..."); Tools.cmd("boot", "ShevBot ended."); process.exit(1);});
 bot.on("warn", function(m) {cmd("warning", m.toString());});
 bot.on("error", function(m) {cmd("error", m.toString());});
 bot.on("debug", function(m) {if (settings.debug) {cmd("debug", m.toString())}});

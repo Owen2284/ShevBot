@@ -135,10 +135,10 @@
 			}
 		],
 		"currentTheme": {
-			"name": "ShevBot",
-			"image": "avatars/default.jpg",
-			"greeting": "ShevBot v#VERSION ready to serve!",
-			"change": "Understood, activating ShevBot!"
+			"name": "WrestlingBot",
+			"image": "avatars/husky.png",
+			"greeting": "WrestlingBot v#VERSION is here to lay the smackdown on some fools!",
+			"change": "AW FORT LAUDY DAUDY! YOU'VE GOT TO FEEL IT IN YOUR BODY! COME ON NOW, AND FEEL. THE. POOOOOOOOOOWER!"
 		}
 	}
 }

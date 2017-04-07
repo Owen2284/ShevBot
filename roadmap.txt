@@ -67,7 +67,9 @@
 [X] New evaluation type: Messages
 [X] Internal: Added isLink function.
 [X] Internal: Added command memory, so commands can store command specific data (found keysponses, mail, reminders, link archives, etc) without need for multiple JSON files.
-[ ] Internal: Added dates to the command prompt messages.
+[-] Internal: Added dates to the command prompt messages.
+[ ] Internal: Improved amount of data provided via the command console (on/off notifications, channel changes, etc.)
+[ ] Internal: Data written to command prompt is now also written to the day's log file.
 
 
 Future Features
@@ -81,6 +83,11 @@ Fix REFRESH command, allow command updating.
 Fix command splitting to allow odd characters (e.g. &).
 Catch crash for not finding image file when switching themes.
 Allow users to create themes.
+Add QUIZ command that generates a quiz of potential answers that people can react to.
+Add is playing messages.
+Determine the most popular games on the channel by what user's are playing.
+Add functions to themes that alter spoken words. (E.g. all caps, no punctuation, etc.)
+
 
 Future Commands
 ---------------

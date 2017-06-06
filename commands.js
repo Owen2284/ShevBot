@@ -17,65 +17,64 @@ var commands = {
 		process: function(bot, message, sender, channel, input, data, settings, details, commands) {
 
 			// Storage variables.
-			var helpString = "```\n";
+			var helpString = "Hi " + sender.username + ", here are all of my commands!"
 			var categoriesToDo = [];
 			var commandsToDo = [];
 			var commandsSoon = [];
 
-			// TODO: Make it a PM?
-			if (input.length == 1) {
-
-				// Store all of the categories and commands.
-				for (var com in commands) {
-					var commandObject = commands[com];
-					if (commandObject.visible) {
-						if (commandObject.active) {
-							commandsToDo.push(com);
-							if (categoriesToDo.indexOf(commandObject.category) == -1) {
-								categoriesToDo.push(commandObject.category);
-							}
-						} else {
-							commandsSoon.push(com);
+			// Store all of the categories and commands.
+			helpString += "```\n";
+			for (var com in commands) {
+				var commandObject = commands[com];
+				if (commandObject.visible) {
+					if (commandObject.active) {
+						commandsToDo.push(com);
+						if (categoriesToDo.indexOf(commandObject.category) == -1) {
+							categoriesToDo.push(commandObject.category);
 						}
+					} else {
+						commandsSoon.push(com);
 					}
 				}
-
-				for (var cat in categoriesToDo) {
-
-					// Construct category header.
-					var headerString = categoriesToDo[cat] + " Commands";
-					var headerBorder = "";
-					for (var i = 0; j = headerString.length, i<j; i++) {headerBorder += "-";}
-					helpString += headerBorder + "\n" + headerString + "\n" + headerBorder + "\n";
-
-					// Add commands of the category.
-					var commandsToRemove = [];
-					for (var com in commandsToDo) {
-						var commandObject = commands[commandsToDo[com]];
-						var extra1 = ""; if (!commandObject.complete) {extra1 = "(INCOMPLETE)";}
-						if (commandObject.category == categoriesToDo[cat] && commandObject.active) {
-							helpString += details.commandCharacter + commandsToDo[com] + " " + commandObject.params
-							helpString += "\t" + extra1 + "\n - " + commandObject.description + "\n\n"; 
-							commandsToRemove = commandsToDo[com];
-						}
-					}
-					helpString += "\n";
-					
-				}
-
-				// Add the coming soon section.
-				helpString += "------------\nComing Soon!\n------------\n";
-				for (var i = 0; j = commandsSoon.length, i<j; i++) {
-					if (i<j-1) {helpString += commandsSoon[i] + ", ";} else {helpString += commandsSoon[i];}
-				}
-				helpString += "\n```";
-
-				// Sending the help text.
-				say("send", message, helpString);
-
-			} else {
-				cmd("command", "Non-typical help execution.");	
 			}
+
+			for (var cat in categoriesToDo) {
+
+				// Construct category header.
+				var headerString = categoriesToDo[cat] + " Commands";
+				var headerBorder = "";
+				for (var i = 0; j = headerString.length, i<j; i++) {headerBorder += "-";}
+				helpString += headerBorder + "\n" + headerString + "\n" + headerBorder + "\n";
+
+				// Add commands of the category.
+				var commandsToRemove = [];
+				for (var com in commandsToDo) {
+					var commandObject = commands[commandsToDo[com]];
+					var extra1 = ""; if (!commandObject.complete) {extra1 = "(INCOMPLETE)";}
+					if (commandObject.category == categoriesToDo[cat] && commandObject.active) {
+						helpString += details.commandCharacter + commandsToDo[com] + " " + commandObject.params
+						helpString += "\t" + extra1 + "\n - " + commandObject.description + "\n\n"; 
+						commandsToRemove = commandsToDo[com];
+					}
+				}
+				helpString += "\n";
+				
+			}
+
+			// Add the coming soon section.
+			helpString += "------------\nComing Soon!\n------------\n";
+			for (var i = 0; j = commandsSoon.length, i<j; i++) {
+				if (i<j-1) {helpString += commandsSoon[i] + ", ";} else {helpString += commandsSoon[i];}
+			}
+			helpString += "\n```";
+
+			// Sending the help text.
+			if (helpString < 2000) {
+				say("pm", message, helpString);
+			} else {
+				say("pm", message, helpString.substring(0,2000));
+			}
+			
 
 		}
 	},
@@ -619,28 +618,108 @@ var commands = {
 		}
 	},
 
-	"SILENCE": {
-		params: "",
-		description: "Prevents a user from speaking for 5 minutes.",
-		category: "Social",
-		active: false,
-		complete: false,
+	"GAME": {
+		params: "[\"select\",\"view\",\"add\",\"remove\",\"clear\"]",
+		description: "Stores a list of games that can be randomly selected for users to play.",
+		category: "Gaming",
+		active: true,
+		complete: true,
 		visible: true,
-		process: function(bot, message, sender, channel, input, data, settings, details, commands) {}
+		process: function(bot, message, sender, channel, input, data, settings, details, commands) {
+			if (input.length > 1) {
+				switch(input[1].toUpperCase()) {
+					case "ADD":
+						if (input.length > 2) {
+							var newGame = input[2]
+							data.commands["GAME"]["list"].push(newGame);
+							Tools.writeJSON(details.dataDir + "commands.json", data.commands);
+							say("send", message, "\"" + newGame + "\" added to the current game list.");
+						} else {
+							say("send", message, "Please provide a game to add to the list.")
+						}
+						break;
+					case "REMOVE":
+						if (input.length > 2) {
+							var gameToRemove = input[2]
+							var theIndex = data.commands["GAME"]["list"].indexOf(gameToRemove)
+							if (theIndex > -1) {
+								data.commands["GAME"]["list"].splice(theIndex, 1);
+								Tools.writeJSON(details.dataDir + "commands.json", data.commands);
+								say("send", message, "\"" + gameToRemove + "\" removed from the current game list.");
+							} else {
+								say("send", message, "\"" + gameToRemove + "\" was not found in the game list.");
+							}
+						} else {
+							say("send", message, "Please provide a game to remove from the list.")
+						}
+						break;
+					case "CLEAR":
+						data.commands["GAME"]["list"] = [];
+						Tools.writeJSON(details.dataDir + "commands.json", data.commands);
+						say("send", message, "Game list cleared.");
+						break;
+					case "SELECT":
+						var gameIndex = Math.floor(Math.random() * data.commands["GAME"]["list"].length);
+						say("send", message, "Selected game: " + data.commands["GAME"]["list"][gameIndex]);
+						break;
+					case "VIEW":
+						var gameString = ""
+						for (var numbi = 0; numbi < data.commands["GAME"]["list"].length; ++numbi){
+							gameString += data.commands["GAME"]["list"][numbi] + ", "
+						}
+						say("send", message, "Current games in the list: " + gameString.substring(0, gameString.length-2));
+						break;
+					default:
+						say("send", message, "The " + details.commandCharacter + "game command needs another argument after it, such as \"add\", \"remove\" or \"select\"."); break;
+				}
+			} else {
+				say("send", message, "The " + details.commandCharacter + "game command needs another argument after it, such as \"add\", \"remove\" or \"select\"."); noCommand = true;
+			}
+		}
 	},
 
 	"NICKNAME": {
-		params: "",
+		params: "<name>",
 		description: "Randomises a person's nickname.",
 		category: "Social",
-		active: false,
-		complete: false,
+		active: true,
+		complete: true,
 		visible: true,
+		guild: true,
+		pm: false,
+		minArgs: 1,
+		permissions: ["CHANGE_NICKNAME", "MANAGE_NICKNAMES"],
+		packages: ["moniker"],
 		process: function(bot, message, sender, channel, input, data, settings, details, commands) {
-			var Moniker = Tools.requireSafely("moniker")
-			var nameGen = Moniker.generator([Moniker.adjective, Moniker.noun]);
-			var newNickName = nameGen.choose();
-			
+			if (input.length > 1) {
+				if (message.guild != null && message.guild.available) {
+					var users = Tools.getAllGuildMembers(message.guild);
+					var theUser = null;
+					for (var i in users) {
+						if ((users[i].user.username.toUpperCase() === input[1].toUpperCase()) || (users[i].nickname != null && users[i].nickname.toUpperCase() === input[1].toUpperCase())) {
+							theUser = users[i];
+						}
+					}
+					if (theUser != null) {
+						var Moniker = require("moniker");
+						var nameGen = Moniker.generator([Moniker.adjective, Moniker.adjective, Moniker.noun]);
+						var newNickArray = nameGen.choose().split("-");
+						var newNickName = "";
+						for (var i = 0; i < newNickArray.length; ++i) {
+							newNickName += newNickArray[i].substring(0,1).toUpperCase() + newNickArray[i].substring(1) + " ";
+						}
+						newNickName = newNickName.substring(0, newNickName.length-1);
+						theUser.setNickname(newNickName);
+						say("send", message, "Nickname of " + theUser.user.username + " changed to \"" + newNickName + "\"!");
+					} else {
+						say("send", message, "Unable to find \"" + input[1] + "\" on the current server.");
+					}
+				} else {
+					say("send", message, "This command can only be run in the text channel of a guild/server.")
+				}
+			} else {
+				say("send", message, "Please provide the username/nickname of the user whose nickname should be changed.")
+			}
 		}
 	},
 
@@ -648,42 +727,128 @@ var commands = {
 		params: "",
 		description: "Sets a random topic for the current channel.",
 		category: "Social",
-		active: false,
-		complete: false,
+		active: true,
+		complete: true,
 		visible: true,
+		guild: true,
+		pm: false,
+		minArgs: 0,
+		permissions: ["MANAGE_CHANNELS"],
+		packages: ["casual", "moniker"],
 		process: function(bot, message, sender, channel, input, data, settings, details, commands) {
-
+			var Casual = require("casual");
+			var Moniker = require("moniker");
+			var topicString = "";
+			var randVal = Math.random() * 4;
+			if (randVal < 1) {
+				topicString = Casual.catch_phrase;
+			} else if (randVal < 2) {
+				topicString = Casual.full_name;
+			} else if (randVal < 3) {
+				var user = Tools.getAllGuildMembers(channel)[Math.floor(Math.random() * Tools.getAllGuildMembers(channel).length)];
+				var gen = Moniker.generator([Moniker.adjective, Moniker.noun]);
+				if (user.nickname != null) {
+					topicString = user.nickname;
+				} else {
+					topicString = user.user.username;
+				}
+				topicString += "'s " + gen.choose().replace(/-/g, " ");
+			} else {
+				var gen = Moniker.generator([Moniker.adjective, Moniker.adjective, Moniker.noun]);
+				topicString = gen.choose().replace(/-/g, " ");
+				topicString = topicString.substring(0,1).toUpperCase() + topicString.substring(1);
+			}
+			var endings = [" discussion.", ", agree or disagree?", " observations.", " fan club.", ", and how it effects you.", " debating.", " circlejerk.", " 101."]
+			var messageString = topicString + endings[Math.floor(Math.random() * endings.length)];
+			channel.setTopic(messageString);
 		}
 	},
 
 	"YOUTUBE": {
-		params: "<channel name>",
-		description: "Fetches the most recent video from a Youtube channel.",
+		params: "[\"search\", \"channel\"] <search term/channel ID>",
+		description: "Runs a YouTube search for a provided search term or channel ID.",
 		category: "Web",
-		active: false,
+		active: true,
 		complete: false,
 		visible: true,
-		process: function(bot, message, sender, channel, input, data, settings, details, commands) {}
-	},
-
-	"TWITTER": {
-		params: "<twitter user tag / hashtag>",
-		description: "Fetches the most recent tweet from the specified twitter user or hashtag.",
-		category: "Web",
-		active: false,
-		complete: false,
-		visible: true,
-		process: function(bot, message, sender, channel, input, data, settings, details, commands) {}
+		guild: true,
+		pm: true,
+		minArgs: 2,
+		permissions: [],
+		packages: ["youtube-node"],
+		process: function(bot, message, sender, channel, input, data, settings, details, commands) {
+			const YouTube = require("youtube-node");
+			const MAX_RESULTS = 3;
+			var yt = new YouTube();
+			yt.setKey("AIzaSyAyPKgiV79FI_VnMGwGLQtHjBWMy7c6Ots");
+			if (input[1].toLowerCase() === "search") {
+				yt.addParam("order", "relevance");
+				yt.addParam("maxResults", MAX_RESULTS);
+				yt.search(input[1], MAX_RESULTS, function(error, result) {
+					if (error) {
+						cmd("youtube", "Error occured:");
+						console.log(error);
+						say("send", message, "Could not find the channel \"" + input[2] + "\".");
+					} else {
+						var videos = result["items"];
+						var response = "Top " + MAX_RESULTS + " search results for \"" + input[2] + "\":\n```Markdown\n";
+						for (var i in videos) {
+							var v = videos[i]["snippet"];
+							response += (parseInt(i)+1) + " " + v["title"] + " (" + v["channelTitle"] + ")\n";
+						}
+						response += "```";
+						say("send", message, response);
+					}
+				});
+			} else if (input[1].toLowerCase() === "channel") {
+				yt.addParam("channelId", input[2]);		// TODO: Get channel ID from channel name.
+				yt.addParam("order", "date");
+				yt.addParam("maxResults", MAX_RESULTS);
+				yt.search("", MAX_RESULTS, function(error, result) {
+					if (error) {
+						cmd("youtube", "Error occured:");
+						console.log(error);
+						say("send", message, "Could not find the channel with the ID \"" + input[2] + "\".");
+					} else {
+						var videos = result["items"];
+						var response = "Newest " + MAX_RESULTS + " videos from \"" + videos[0]["snippet"]["channelTitle"] + "\":\n```Markdown\n";
+						for (var i in videos) {
+							var v = videos[i]["snippet"];
+							response += (parseInt(i)+1) + " " + v["title"] + "\n";
+						}
+						response += "```";
+						say("send", message, response);
+					}
+				});
+			} else {
+				say("send", message, "Please specify whether you want a Youtube search or channel operation.")
+			}
+		}
 	},
 
 	"REDDIT": {
-		params: "<subreddit name>",
-		description: "Fetches the top post of the specified subreddit.",
+		params: "<subreddit name> [\"hot\", \"new\", \"top\"]",
+		description: "Fetches the top 5 posts of the specified subreddit, based on the given category.",
 		category: "Web",
-		active: false,
-		complete: false,
+		active: true,
+		complete: true,
 		visible: true,
-		process: function(bot, message, sender, channel, input, data, settings, details, commands) {}
+		guild: true,
+		pm: true,
+		minArgs: 2,
+		permissions: [],
+		packages: ["requests"],
+		process: function(bot, message, sender, channel, input, data, settings, details, commands) {
+			var subreddit = input[1].toLowerCase();
+			var category = input[2].toLowerCase();
+			var range = "all";
+			var limit = 5;
+			if (["hot", "top", "new"].indexOf(category) > -1) {
+				var response = Tools.sayRedditData(subreddit, category, range, limit, message);
+			} else {
+				say("send", message, "Sorry, \"" + category + "\" is not a valid category.");
+			}
+		}
 	},
 
 	"SHITPOST": {
@@ -750,6 +915,13 @@ exports.shevbotCommands = commands;
 		active: false,
 		complete: false,
 		visible: true,
-		process: function(bot, message, sender, channel, input, data, settings, details, commands) {}
+		guild: true,
+		pm: true,
+		minArgs: 0,
+		permissions: [],
+		packages: [],
+		process: function(bot, manifest, input, data, settings, details, commands) {}
 	},
+
+	Manifest contains all data input from the user (message, channel, author, command input, raw input, channel type, arg count, time, date, etc.) 
 */

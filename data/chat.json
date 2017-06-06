@@ -289,15 +289,15 @@
 			"WHORE",
 			"NIGGA"
 		],
-		"counter": 503
+		"counter": 523
 	},
 	"reacts": {
-		"counter": 19
+		"counter": 29
 	},
 	"greetings": {
 		"channelsToGreet": [
 			"BOT"
 		],
-		"counter": 21
+		"counter": 118
 	}
 }

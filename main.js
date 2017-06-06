@@ -41,6 +41,7 @@ var commands = Tools.requireSafely("./commands.js").shevbotCommands;
 
 // Files
 var data = {
+	bot: readJSON(details.dataDir + "bot.json"),
 	chat: readJSON(details.dataDir + "chat.json"), 
 	commands: readJSON(details.dataDir + "commands.json")
 };
@@ -49,7 +50,7 @@ var data = {
 var settings = {
 	debug: false,
 	allowLooping: false,
-	initialGreet: true,
+	initialBoot: true,
 	currentStreamDispatcher: null	
 };
 
@@ -59,28 +60,37 @@ var bot = new Discord.Client();
 // Ready event handler, greets allowed channels.
 bot.on("ready", function() {
 
-	if (!settings.debug && settings.initialGreet) {
+	if (settings.initialBoot) {
 
-		var channelArr = bot.channels.array();
-		var greetingString = data.commands["THEME"]["currentTheme"]["greeting"].replace("#VERSION", details.versionNumber);
-		
-		for (var i in channelArr) {
-			var currentChannel = channelArr[i];
-			if (currentChannel.constructor.name === "TextChannel") {
-				for (var j in data.chat["greetings"]["channelsToGreet"]) {
-					if (currentChannel.name.toUpperCase() === data.chat["greetings"]["channelsToGreet"][j]) {
-						currentChannel.sendMessage(greetingString);
-						++data.chat["greetings"]["counter"];
-						cmd("greet", "Channel \"" + currentChannel.name + "\" greeted.");
+		// Increment the boot count.
+		data.bot["boot"] = data.bot["boot"] + 1;
+		writeJSON(details.dataDir + "bot.json", data.bot);
+		cmd("boot", "Boot count incremented.");
+
+		// Run greeting code.
+		if (!settings.debug) {
+			var channelArr = bot.channels.array();
+			var greetingString = data.commands["THEME"]["currentTheme"]["greeting"].replace("#VERSION", details.versionNumber);
+			for (var i in channelArr) {
+				var currentChannel = channelArr[i];
+				if (currentChannel.constructor.name === "TextChannel") {
+					for (var j in data.chat["greetings"]["channelsToGreet"]) {
+						if (currentChannel.name.toUpperCase() === data.chat["greetings"]["channelsToGreet"][j]) {
+							currentChannel.send(greetingString);
+							++data.chat["greetings"]["counter"];
+							cmd("greet", "Channel \"" + currentChannel.name + "\" greeted.");
+						}
 					}
 				}
 			}
+			writeJSON(details.dataDir + "chat.json", data.chat);
 		}
 
-		writeJSON(details.dataDir + "chat.json", data.chat);
+		// Set a "game" to play.
+		Tools.setNewGame(bot, data);
 
-		settings.initialGreet = false;
-
+		// Toggle the initial boot variable.
+		settings.initialBoot = false;
 	}
 
 });
@@ -97,7 +107,6 @@ bot.on("message", function(message) {
 	var isBot = sender.bot;
 	
 	if(!isBot || settings.allowLooping) {
-
 		if (isCommand) {
 			var command = commandSplit(raw); command[0] = command[0].replace(details.commandCharacter, "");
 			evaluateCommand(message, sender, channel, command);
@@ -109,7 +118,6 @@ bot.on("message", function(message) {
 			evaluateReactions(message, sender, channel, raw);
 			evaluateSwears(message, sender, channel, raw);
 		}
-
 	}
 
 });
@@ -121,8 +129,14 @@ bot.on("error", function(m) {cmd("error", m.toString());});
 bot.on("debug", function(m) {if (settings.debug) {cmd("debug", m.toString())}});
 bot.on("voiceSpeaking", function() {if (settings.debug) {cmd("warning", "Speech detected.");}});
 
+// Creating interval calls.
+const MINUTE = 60000;
+setInterval(Tools.setNewGame, 30 * MINUTE, bot, data);
+
 // Activate the bot.
 bot.login("MjEwNTIyNjI1NTU2ODczMjE2.CsbtfA.dHoAx_dx4v2Yp2oJ-5qmxC6Uhqk");
+
+/*---------------------------------------------------------------------------*/
 
 function evaluateCommand(message, sender, channel, command) {
 

@@ -2,13 +2,14 @@ var fs = require("fs");
 
 // General method for bot speech.
 function say(inType, inMessage, inText) {
-	if (inType === "send") {inMessage.channel.sendMessage(inText);} 
-	else if (inType === "reply") {inMessage.reply(inText);} 
+	if (inType === "send") {inMessage.channel.send(inText);} 
+	else if (inType === "reply") {inMessage.reply(inText);}
+	else if (inType === "pm") {pm(inMessage.author, inText);}
 	else {cmd("whoops", "Invalid response type for bot message.");}
 }
 
 function pm(user, text) {
-	user.sendMessage(text);
+	user.send(text);
 }
 
 // General command for console logging.
@@ -376,12 +377,84 @@ function archiveGetByField(type, field, data) {
 	}
 }
 
-// Retrieves a user object that has the name or nickname provided from the specified guild.
+// Retrieves all user objects that have the username or nickname provided from the specified guild.
 function getUserFromGuildViaNameOrNickname(guild, name) {
-	var allUsers = guild.members.array();
+	var allUsers = getAllGuildMembers(guild);
+	var returnUsers = [];
 	for (var i in allUsers) {
-		
+		if ((allUsers[i].user.username.toUpperCase() == name.toUpperCase()) || (allUsers[i].nickname != null && allUsers[i].nickname.toUpperCase() === name.toUpperCase())) {
+			returnUsers.push(allUsers[i]);
+		}
 	}
+	return returnUsers;
+}
+
+// Gets memebers from the guild of the provided message or channel as an array.
+function getGuildMembers(obj) {
+	//cmd("debug", obj.constructor.name)
+	if (obj.constructor.name == "Guild") {
+		return obj.members.array();
+	} else if (obj.constructor.name == "TextChannel" || obj.constructor.name == "Message") {
+		return obj.guild.members.array();
+	} else {
+		cmd("oops", "Tools.getGuildMembers doesn't support " + obj.constructor.name + " as an argument.");
+		return [];
+	}
+}
+
+// Formats and sends the reddit data from a manual API call.
+function sendRedditData(subreddit, category, range, limit, message) {
+	/*
+	var reddit = require("redwrap")
+	reddit.r(subreddit).sort(category).from(range).exe(function(err, data, res){
+	});*/
+	var request = require("request");
+	var url = "https://www.reddit.com/r/" + subreddit + "/" + category + "/.json?t=" + range + "&limit=" + limit;
+	request.get({url: url, json: true, headers: {'User-Agent': 'request'}}, (err, res, data) => {
+		if (err) {
+			console.log("Error:", err);
+		} else if (res.statusCode !== 200) {
+			cmd("request", "Status:", res.statusCode);
+			say("send", message, "Sorry, but r/" + subreddit + " could not be found.");
+		} else {
+			var response = formatRedditData(subreddit, category, range, limit, data);
+			say("send", message, response);
+		}
+	});
+}
+
+function formatRedditData(subreddit, category, range, limit, data) {
+	var posts = data["data"]["children"];
+	var response = "The " + limit + " " + category + " posts from " + posts[0]["data"]["subreddit_name_prefixed"] + ":\n```Markdown\n";
+	var references = "";
+	var stickies = 0;
+	for (var i in posts) {
+		var post = posts[i]["data"];
+		if (!post["stickied"]) {
+			var postNum = (i - stickies) + 1;
+			if (postNum > limit) {break;}
+			response += postNum + " - " + post["title"] + " (";
+			if (post["score"] >= 0) {response += "+";}
+			response += post["score"] + ", " + post["num_comments"] + " comments) \n";
+			references += "[" + postNum + "]:" + post["permalink"] + "\n";
+		} else {
+			stickies += 1;
+		}
+	}
+	response += "\n" + references + "```";
+	if (stickies > 0) {response += stickies + " stickied posts were ignored.";}
+	return response;
+}
+
+function randomListElem(list) {
+	return list[Math.floor(Math.random() * list.length)];
+}
+
+function setNewStatus(bot, data) {
+	var gameList = data.bot["games"];
+	var newGame = randomListElem(gameList);
+	bot.user.setGame(newGame);
+	cmd("game", "Game changed to \"" + newGame + "\".");
 }
 
 exports.say = say;
@@ -409,4 +482,8 @@ exports.commandSplitOld = splitTextIntoCommand;
 exports.archiveAdd = archiveAdd;
 exports.archiveGetByCategory = archiveGetByCategory;
 exports.archiveGetByField = archiveGetByField;
-exports.getUserFromGuild = getUserFromGuildViaNameOrNickname;
+exports.getGuildMembersByName = getUserFromGuildViaNameOrNickname;
+exports.getAllGuildMembers = getGuildMembers;
+exports.sayRedditData = sendRedditData;
+exports.randomListElem = randomListElem;
+exports.setNewGame = setNewStatus;

@@ -57,42 +57,47 @@
 
 2.3.0 - Social Update
 -----
-[ ] New command: YOUTUBE - Fetches the most recent video from a Youtube channel.
-[ ] New command: REDDIT - Fetches the top post of the specified subreddit.
-[ ] New command: TWITTER - Fetches the most recent tweet from the specified twitter user or hashtag.
-[ ] New command: NICKNAME - Generates a random nickname for the specified user.
-[ ] New command: TOPIC - Sets a random topic for the current channel.
-[ ] New command: SILENCE - Prevents a user from speaking for 5 minutes.
+[X] New command: YOUTUBE - Fetches the most recent videos from a Youtube channel, or runs a search query.
+[X] New command: REDDIT - Fetches the top post of the specified subreddit.
+[X] New command: NICKNAME - Generates a random nickname for the specified user.
+[X] New command: TOPIC - Sets a random topic for the current channel.
+[X] New command: GAME - Selects a game for users to play based on observed games.
+[X] Improved command: HELP - Help info is now PM'ed to the user.
 [X] New evaluation type: Links
 [X] New evaluation type: Messages
 [X] Internal: Added isLink function.
 [X] Internal: Added command memory, so commands can store command specific data (found keysponses, mail, reminders, link archives, etc) without need for multiple JSON files.
-[-] Internal: Added dates to the command prompt messages.
-[ ] Internal: Improved amount of data provided via the command console (on/off notifications, channel changes, etc.)
+[X] Internal: Added ability for bot to PM users.
+[X] Other: Bot now displays various actions as the game it is playing.
+
+2.4.0 - Management Update
+-----
+[ ] Internal: New functions to simplify code (find guild user by username/nickname, get channel type)
+[ ] Internal: New command fields (needsGuild, minimumArgs, aliases, delete initial command call, examples, etc.)
+[ ] Internal: New command structure (collected into various folders)
+[ ] Internal: Created GUI for viewing and managing ShevBot's state.
+[ ] Internal: Added check that ensures all data files exist before launching.
+[ ] Internal: Added check to ensure custom .js files compile before launching.
+[ ] Internal: Added that tracks permissions and actions to do per server.
+[ ] Internal: Improved amount of data provided via the command console (on/off notifications, channel changes, who ran commands, etc.)
 [ ] Internal: Data written to command prompt is now also written to the day's log file.
+[ ] Bug Fix: ShevBot now correctly closes when connection is lost, rather than "soft-dying".
+
+2.5.0 - Shitposting Update
+-----
+[ ] New command: SHITPOST - Creates a random message based on previous messages sent by a user.
+[ ] Updated command: THEME - Users can now create custom themes, and themes can now be given functions to alter their speech patters (capitalisation, word swapping, etc.)
+[ ] Fixed command: THEME - ShevBot no longer crashes on missing images.
+[ ] Fixed command: REFRESH - Commands now update as well.
 
 
-Future Features
+Potential Future Features
 ---------------
-Flesh out debug console
-Add Persistents tools; shorten MAIL and REMINDER functions.
-Edit MAIL and REMINDER to utilise new command parsing.
 Add timestamp/date to mails.
-Add check to ensure custom .js files compile before launching.
 Fix REFRESH command, allow command updating.
 Fix command splitting to allow odd characters (e.g. &).
-Catch crash for not finding image file when switching themes.
-Allow users to create themes.
 Add QUIZ command that generates a quiz of potential answers that people can react to.
-Add is playing messages.
-Determine the most popular games on the channel by what user's are playing.
-Add functions to themes that alter spoken words. (E.g. all caps, no punctuation, etc.)
-
-
-Future Commands
----------------
-SHITPOST
-
-TO TEST
--------
-REFRESH - Check commands can be updated.
+Add check to NICKNAME to see if name can be changed.
+Fix help bug if HELP > 2000 chars.
+Add ability to specify the command that users want HELP for.
+Add markdown features to HELP.

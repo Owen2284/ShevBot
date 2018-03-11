@@ -87,11 +87,7 @@
 [X] Tools package: Removed message archiving and purged records.
 [X] Tools package: New functions to simplify code (find guild user by username/nickname, get channel type)
 [X] Tools package: Exports from tools.js are now in a heirarchical structure, and references have been updated accordingly.
-[ ] Internal: Added check that ensures all data files/directories exist before launching.
 [X] Internal: Added check to ensure custom .js files compile before launching.
-[ ] Internal: Added system that tracks permissions and actions to do per server.
-[ ] Internal: ShevBot checks that each server provides the basic requirements for standard operation (defined in bot.json)
-[ ] Internal: Improved amount of data provided via the command console (on/off notifications, channel changes, who ran commands, etc.)
 [X] Internal: Removed unnecessary posts to the command console.
 [X] Internal: Data written to command prompt is now also written to the day's log file.
 [X] Internal: Bot now stores its token in bot.json.
@@ -101,8 +97,6 @@
 [X] Internal: prep.js created to store functions that are run on bot launch.
 [X] Internal: events.js created to store functions that bot calls upon events.
 [X] Internal: operations.js created to store evaluation functions.
-[ ] Bug Fix: ShevBot now correctly closes when connection is lost, rather than "soft-dying".
-[ ] Bug Fix: Solved numerous unhandled Promise issues.
 [X] Other: Greeting now displays total available commands and serving servers.
 [X] Other: Various new bot games added.
 [X] Other: Upgraded to Visual Studio Code IDE.
@@ -110,6 +104,12 @@
 2.4.1 - GUI Update
 -----
 [ ] Internal: Created GUI for viewing and managing ShevBot's state.
+[ ] Internal: Added check that ensures all data files/directories exist before launching.
+[ ] Internal: Added system that tracks permissions and actions to do per server.
+[ ] Internal: ShevBot checks that each server provides the basic requirements for standard operation (defined in bot.json)
+[ ] Internal: Improved amount of data provided via the command console (on/off notifications, channel changes, who ran commands, etc.)
+[ ] Bug Fix: ShevBot now correctly closes when connection is lost, rather than "soft-dying".
+[ ] Bug Fix: Solved numerous unhandled Promise issues.
 
 2.5.0 - Shitposting Update
 -----

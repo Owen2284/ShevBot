@@ -1,6 +1,6 @@
 {
   "name": "shevbot",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "description": "Discord bot by Owen Shevlin",
   "main": "main.js",
   "bin": {

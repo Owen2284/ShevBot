@@ -1,8 +1,11 @@
+// tools.js: Stores handy functions.
+
 var fs = require("fs");
 
 // General method for bot speech.
 function say(inType, inMessage, inText) {
-	if (inType === "send") {inMessage.channel.send(inText);} 
+	if (inType === "send" || inType == "say") {inMessage.channel.send(inText);} 
+	else if (inType === "tts") {inMessage.channel.send(inText, {tts: true})}
 	else if (inType === "reply") {inMessage.reply(inText);}
 	else if (inType === "pm") {pm(inMessage.author, inText);}
 	else {cmd("whoops", "Invalid response type for bot message.");}
@@ -13,7 +16,7 @@ function pm(user, text) {
 }
 
 // General command for console logging.
-function cmd(cType, cText) {
+function cmd(cType, cText, toConsole = true, toFile = true) {
 	// Constant determining how long type should be.
 	const BUFFER_LENGTH = 7;
 	// Creating initial string.
@@ -34,9 +37,38 @@ function cmd(cType, cText) {
 	}
 
 	// Close off string and log the message.
-	cString += "] " + cText;	
-	console.log(cString);
+	cString += "] " + cText;
+	if (toConsole) {console.log(cString);}
+	if (toFile) {logToFile(cString)}
 
+}
+
+// Writes a given error to an error text file.
+function err(error, errorDir = "err/") {
+	var date = new Date();
+	var errorFileName = errorDir + getDateTime().replace(/:/g, ";") + ".txt";
+	var errorFileString = error.stack;
+	writeFile(errorFileName, errorFileString, false);
+	cmd("error", "Stack trace saved to \"" + errorFileName + "\".")
+}
+
+// Saves a given line to the days log file.
+function logToFile(message, logDir = "log/") {
+	var fileName = "";
+	try {
+		var dateTime = require('node-datetime');
+		var dt = dateTime.create();
+		fileName = logDir + dt.format('Y-m-d') + ".txt";
+	}
+	catch (e) {
+		err(e);
+		fileName = getDate().replace("/", "-") + ".txt";
+	}
+	if (fs.existsSync(fileName)) {
+		fs.appendFileSync(fileName, message + "\n");
+	} else {
+		writeFile(fileName, message + "\n", false);
+	}
 }
 
 // Gets the time for the TIME command.
@@ -57,32 +89,34 @@ function getDate() {
 	return day + "/" + month + "/" + year;
 }
 
+// Gets detailed date time.
+function getDateTime() {
+	try {
+		var dateTime = require('node-datetime');
+		var dt = dateTime.create();
+		var formatted = dt.format('Y-m-d_H:M:S');
+		return formatted;
+	} catch (e) {
+		err(e);
+		return getDate().replace("/", "-") + "_" + getTime();
+	}
+}
+
 // Loads in a file at the specified path.
-function readFile(path) {
+function readFile(path, output = false) {
 	var temp = fs.readFileSync(path, "utf8");
-	//if(typeof temp === "string") {cmd("files", path + " read successfully.");}
+	if (typeof temp === "string") {cmd("files", path + " read successfully.", output);}
 	return temp;
 }
 
 // Writes a string to a file specified by path.
-function writeFile(path, fileString) {
+function writeFile(path, fileString, output = false) {
 	if (typeof fileString === "string") {
 		fs.writeFileSync(path, fileString);
-		//cmd("files", path + " written successfully.");
+		cmd("files", path + " written successfully.", output);
 	} else {
 		cmd("whoops", "Invalid string for writeFile.");
 	}
-}
-
-// Terminate function for the END command.
-function terminate(bot) {
-	waitFor(3000);
-	bot.destroy(function(err) {
-		if (err != null) {
-			cmd(err); 
-		}
-	});
-	process.exit(0);
 }
 
 // Used during terminate().
@@ -188,36 +222,39 @@ function objectInfo(object) {
 	}
 }
 
-function readJSON(filepath) {
+// Utilise existing methods to directly read in a JSON file in the correct format.
+function readJSON(filepath, output = false) {
 	try {
 		var jsonData = JSON.parse(readFile(filepath));
-		cmd("files", filepath + " read and parsed successfully.");
+		cmd("json", filepath + " read and parsed successfully.", output);
 		return jsonData;
+		hgiuguy
 	} catch (e) {
-		cmd("files", "Error reading/parsing \"" + filepath + "\", the following error occured:");		
-		console.log(e);
+		cmd("json", "Error reading/parsing \"" + filepath + "\".");		
+		err(e);
 		return null;
 	}
 }
 
-function writeJSON(filepath, data) {
+// Utilise existing methods to directly write to a JSON file in the correct format.
+function writeJSON(filepath, data, output = false) {
 	try{
 		writeFile(filepath, JSON.stringify(data, null, "\t"));
-		cmd("files", filepath + " written successfully.");
+		cmd("json", filepath + " written successfully.", output);
 	} catch (e) {
-		cmd("files", "Error writing \"" + filepath + "\", the following error occured:");		
-		console.log(e);
+		cmd("json", "Error writing \"" + filepath + "\".");		
+		err(e);
 	}
 }
 
-function requireSafely(module) {
+function requireSafely(module, output = false) {
 	try {
 		var temp = require(module);
-		cmd("module", "Module \"" + module + "\" successfully loaded.");
+		cmd("module", "Module \"" + module + "\" successfully loaded.", output);
 		return temp;
 	} catch(e) {
-		console.log(e);
 		cmd("module", "Module \"" + module + "\" not found.");
+		err(e);
 		return null;
 	}
 }
@@ -334,49 +371,6 @@ function splitTextIntoCommandStolenFromStackOverflow(raw) {
 	return finalCommand;
 }	
 
-// Command for archiving a message into the archive file.
-function archiveAdd(username, str, timestamp, type, details) {
-	if (type == "messages" || type == "links") {
-		var archive = readJSON(details.dataDir + "archives.json");
-		var item = {
-			"user": username,
-			"message": str,
-			"timestamp": timestamp
-		}
-		archive[type].push(item);
-		writeJSON(details.dataDir + "archives.json", archive);
-	} else {
-		cmd("whoops", "Invalid archive type for archiveAdd() - \"" + type + "\".");
-	}
-}
-
-// Command for retrieving a whole list of archive data from a specified category.
-function archiveGetByCategory(type) {
-	if (type == "messages" || type == "links") {
-		var archive = readJSON(details.dataDir + "archives.json");
-		return archive[type];
-	} else {
-		cmd("whoops", "Invalid archive type for archiveGet() - \"" + type + "\".");
-	}
-} 
-
-// Command for retrieving a partial list of archive data based on id the data in the specified field matches the parameter data.
-function archiveGetByField(type, field, data) {
-	if (type == "messages" || type == "links") {
-		var archive = archiveGetByCategory(type);
-		var returnArray = [];
-		for (var i in archive) {
-			var archiveObject = archive[i];
-			if (archiveObject[field] == data) {
-				returnArray.push(archiveObject);
-			}
-		}
-		return returnArray;	
-	} else {
-		cmd("whoops", "Invalid archive type for archiveGet() - \"" + type + "\".");
-	}
-}
-
 // Retrieves all user objects that have the username or nickname provided from the specified guild.
 function getUserFromGuildViaNameOrNickname(guild, name) {
 	var allUsers = getAllGuildMembers(guild);
@@ -391,23 +385,22 @@ function getUserFromGuildViaNameOrNickname(guild, name) {
 
 // Gets memebers from the guild of the provided message or channel as an array.
 function getGuildMembers(obj) {
-	//cmd("debug", obj.constructor.name)
 	if (obj.constructor.name == "Guild") {
 		return obj.members.array();
 	} else if (obj.constructor.name == "TextChannel" || obj.constructor.name == "Message") {
 		return obj.guild.members.array();
+	} else if (obj.constructor.name == "DMChannel") {
+		return [obj.recipient];
+	} else if (obj.constructor.name == "GroupDMChannel") {
+		return obj.recipients.array();
 	} else {
-		cmd("oops", "Tools.getGuildMembers doesn't support " + obj.constructor.name + " as an argument.");
+		cmd("oops", "Tools.discord.getGuildMembers() doesn't support " + obj.constructor.name + " as an argument.");
 		return [];
 	}
 }
 
 // Formats and sends the reddit data from a manual API call.
 function sendRedditData(subreddit, category, range, limit, message) {
-	/*
-	var reddit = require("redwrap")
-	reddit.r(subreddit).sort(category).from(range).exe(function(err, data, res){
-	});*/
 	var request = require("request");
 	var url = "https://www.reddit.com/r/" + subreddit + "/" + category + "/.json?t=" + range + "&limit=" + limit;
 	request.get({url: url, json: true, headers: {'User-Agent': 'request'}}, (err, res, data) => {
@@ -423,6 +416,7 @@ function sendRedditData(subreddit, category, range, limit, message) {
 	});
 }
 
+// Performs the nitty-gritty of getting and formatting the reddit posts.
 function formatRedditData(subreddit, category, range, limit, data) {
 	var posts = data["data"]["children"];
 	var response = "The " + limit + " " + category + " posts from " + posts[0]["data"]["subreddit_name_prefixed"] + ":\n```Markdown\n";
@@ -446,10 +440,12 @@ function formatRedditData(subreddit, category, range, limit, data) {
 	return response;
 }
 
+// Random list element accessor.
 function randomListElem(list) {
 	return list[Math.floor(Math.random() * list.length)];
 }
 
+// Function that handles the process of changing the game ShevBot is playing.
 function setNewStatus(bot, data) {
 	var gameList = data.bot["games"];
 	var newGame = randomListElem(gameList);
@@ -457,33 +453,282 @@ function setNewStatus(bot, data) {
 	cmd("game", "Game changed to \"" + newGame + "\".");
 }
 
-exports.say = say;
-exports.pm = pm;
-exports.cmd = cmd;
-exports.getDate = getDate;
-exports.getTime = getTime;
-exports.readFile = readFile;
-exports.writeFile = writeFile;
-exports.readJSON = readJSON;
-exports.writeJSON = writeJSON;
-exports.countOccurrences = occurrences;
-exports.terminate = terminate;
-exports.waitFor = waitFor;
-exports.countKeysponses = countKeysponses;
-exports.arrayToString = arrayToString;
-exports.getResponse = getResponse;
-exports.determineMatch = determineMatch;
-exports.objectInfo = objectInfo;
-exports.requireSafely = requireSafely;
-exports.isLink = isLink;
-exports.changeTheme = changeThemeAllChannels;
-exports.commandSplit = splitTextIntoCommandStolenFromStackOverflow;
-exports.commandSplitOld = splitTextIntoCommand;
-exports.archiveAdd = archiveAdd;
-exports.archiveGetByCategory = archiveGetByCategory;
-exports.archiveGetByField = archiveGetByField;
-exports.getGuildMembersByName = getUserFromGuildViaNameOrNickname;
-exports.getAllGuildMembers = getGuildMembers;
-exports.sayRedditData = sendRedditData;
-exports.randomListElem = randomListElem;
-exports.setNewGame = setNewStatus;
+// Easy accessor for an channel's type. (BEfore I found out there was a really easy way to do it.)
+function getChannelType(channel) {
+	return channel.constructor.name.replace("Channel", "");
+}
+
+// Gets a user and their nickname on the current server.
+function getAllNamesOf(guilduser) {
+	if (guilduser.constructor.name == "GuildMember") {
+		var names = [guilduser.user.username];
+		if (guilduser.nickname != null) {
+			names.push(guilduser.nickname);
+		}
+		return names;
+	} else if (guilduser.constructor.name == "User") {
+		return [guilduser.user.username];
+	} else {
+		cmd("oops", "Tools.discord.getAllNamesOf() doesn't support " + guilduser.constructor.name + " as an argument.");
+		return [];
+	}
+}
+
+// Attempts to get a user's nickname or username.
+function getNicknameDefaultToUsername(guilduser) {
+	if (guilduser.constructor.name == "GuildMember" || guilduser.constructor.name == "User") {
+		var namesList = getAllNamesOf(guilduser);
+		return namesList[namesList.length];
+	} else {
+		cmd("oops", "Tools.discord.getNickname() doesn't support " + guilduser.constructor.name + " as an argument.");
+		return "";
+	}
+}
+
+// Large function that loads in any acceptable command .js files in the command directory. Returns a flat list of these command objects.
+function acquireCommands(commandDir) {
+
+	const CONSOLE_TAG = "cominit";
+
+	// Reading in order.js and ordering the categories appropriately.
+	var allCategories = [];
+	try {
+		// Fetch all files in the main command directory.
+		var unorderedCategories = fs.readdirSync(commandDir);
+		var notDirs = [];
+		for (var p in unorderedCategories) {
+			var dirToCheck = commandDir + unorderedCategories[p];
+			var isDir = fs.lstatSync(dirToCheck).isDirectory();
+			if (!isDir) {
+				notDirs.push(unorderedCategories[p]);
+			}
+		}
+		for (var p in notDirs) {
+			var fileToSplice = notDirs[p];
+			var spliceIndex = unorderedCategories.indexOf(fileToSplice);
+			unorderedCategories.splice(spliceIndex, 1);
+		}
+		var firstCategories = [];
+		var lastCategories = [];
+		var manualCategories = [];
+
+		// Read in order file and operation.
+		var orderFile = readJSON("com/order.json");
+		var operation = orderFile["operation"];
+		// First segment processing
+		if (orderFile["first"].length > 0) {
+			for (var i in orderFile["first"]) {
+				var catName = orderFile["first"][i];
+				var indexo = unorderedCategories.indexOf(catName, 0);
+				if (indexo >= 0) {
+					unorderedCategories.splice(indexo, 1);
+					firstCategories.push(catName);
+				}
+			}
+		}
+
+		// Last segment processing
+		if (orderFile["last"].length > 0) {
+			for (var i in orderFile["last"]) {
+				var catName = orderFile["last"][i];
+				var indexo = unorderedCategories.indexOf(catName, 0);
+				if (indexo >= 0) {
+					unorderedCategories.splice(indexo, 1);
+					lastCategories.push(catName);
+				}
+			}
+		}
+
+		// Manual segment processing
+		if (orderFile["manual"].length > 0) {
+			for (var i in orderFile["manual"]) {
+				var catName = orderFile["manual"][i];
+				var indexo = unorderedCategories.indexOf(catName, 0);
+				if (indexo >= 0) {
+					unorderedCategories.splice(indexo, 1);
+					manualCategories.push(catName);
+				}
+			}
+		}
+
+		// Assembling final list. Operation: "a" means plance things not in manual after manual, "b" means before manual, "i" means ignore any not in lists.
+		if (operation == "i") {
+			allCategories = firstCategories.concat(manualCategories).concat(lastCategories);
+		}
+		else if (operation == "b") {
+			allCategories = firstCategories.concat(unorderedCategories).concat(manualCategories).concat(lastCategories);
+		}
+		else if (operation == "a" || true) {		// Default behaviour
+			allCategories = firstCategories.concat(manualCategories).concat(unorderedCategories).concat(lastCategories);
+		}
+
+		cmd(CONSOLE_TAG, "order.json loaded in; categories organised as specified.");
+
+	} catch (e) {
+		cmd(CONSOLE_TAG, "Malformed order.json file, unable to correctly order the command categories.");
+		err(e);
+		allCategories = fs.readdirSync(commandDir);
+	}
+
+	// Getting modules.
+	const syntaxChecker = require("syntax-error");
+	
+	// Initialising storage variables.
+	var allCommands = [];
+	var counters = [[], [], [], [], []];		// Success, filetype, compilation, fields, unknown.
+
+	// Loop through all category directories.
+	for (var i in allCategories) {
+		var currentCat = allCategories[i];
+		var categoryDir = commandDir + currentCat + "/";
+		var allCommandFiles = fs.readdirSync(categoryDir);
+		var categoryCommands = [];
+		var requiredFields = readJSON("com/fields.json");
+		for (var j in allCommandFiles) {
+			var commandFile = allCommandFiles[j];
+			var commandPath = categoryDir + commandFile;
+			try {
+				// Check that the file is a .js file.
+				var fileTypeCheck = commandPath.endsWith(".js");
+				if (fileTypeCheck) {
+					// Check that the file correctly compiles.
+					var compilationCheck = syntaxChecker(fs.readFileSync(commandPath), commandPath) == undefined;
+					if (compilationCheck) {
+						var fieldCheck = true;
+						var failedFields = [];
+						// Load in the command.
+						var commandToTest = require("./" + commandPath);
+						// Check that the command provided exists (exports != null)
+						if (commandToTest != null && commandToTest != undefined) { 
+							// Check that each field exists and check it's the correct type.
+							for (var q in requiredFields) {
+								var fieldToCheck = requiredFields[q];
+								var commandFieldData = commandToTest[fieldToCheck["name"]];
+								if (commandFieldData != null && commandFieldData != undefined) {
+									// Use alternate check method for arrays.
+									if (fieldToCheck["type"] == "array") {
+										if (!Array.isArray(commandFieldData)) {
+											fieldCheck = false;
+											failedFields.push(fieldToCheck["name"]);
+										}
+									}
+									// Otherwise use typeof to check
+									else {
+										var commandFieldType = typeof(commandFieldData);
+										var isTypeMatch = (commandFieldType == fieldToCheck["type"]);
+										if (!isTypeMatch) {
+											fieldCheck = false;
+											failedFields.push(fieldToCheck["name"]);
+										}										
+									}
+								}
+								else {fieldCheck = false; failedFields.push(fieldToCheck["name"]);}
+							}
+						}
+						else {fieldCheck = false; failedFields.push("Whole command is null/undefined.");}
+						if (fieldCheck) {
+							// Accept the command.
+							categoryCommands.push(commandToTest);
+							counters[0].push(commandFile);
+							cmd(CONSOLE_TAG, " " + commandFile + " successfully loaded in.");
+						}
+						else {
+							counters[3].push(commandFile);
+							var fieldCheckFailedString = " " + commandFile + " failed to load in; field check failed.";
+							if (commandToTest != null && commandToTest != undefined) {
+								fieldCheckFailedString += " (" + failedFields[0] + ")";
+							}
+							else {
+								fieldCheckFailedString += " (Failed fields: " + arrayToString(failedFields, ", ") + ")";
+							}
+							cmd(CONSOLE_TAG, fieldCheckFailedString);
+						}
+					}
+					else {
+						counters[2].push(commandFile);
+						cmd(CONSOLE_TAG, " " + commandFile + " failed to load in; compilation check failed.");
+					}
+				}
+				else {
+					counters[1].push(commandFile);
+					cmd(CONSOLE_TAG, " " + commandFile + " was ignored; incorrect file type.");
+				}
+			} catch (e) {
+				counters[4].push(commandFile);
+				cmd(CONSOLE_TAG, " " + commandFile + " failed to load in; unknown error occured.");
+				err(e);
+			}
+		}
+		categoryCommands.sort(function(a,b) {if (a.order < b.order) {return -1} else if (a.order > b.order) {return 1} else {return 0}})
+		allCommands = allCommands.concat(categoryCommands);
+	}
+
+	cmd(CONSOLE_TAG, counters[0].length + " commands successfully loaded in.");
+	cmd(CONSOLE_TAG, counters[2].length + " commands failed the compilation check. (Check the code for errors)");
+	cmd(CONSOLE_TAG, counters[3].length + " commands failed the field check. (Ensure the command is the only export object and has all necessary fields)");
+	cmd(CONSOLE_TAG, counters[4].length + " commands failed to load for due to an unknown exception.");
+	cmd(CONSOLE_TAG, counters[1].length + " files ignored due to file type. (.js files only)");
+
+	return allCommands; 
+}
+
+// Function that generates the help string for the HELP function.
+function acquireHelpString(commandList) {
+
+}
+
+
+module.exports = {
+	comms: {
+		say: say,
+		pm: pm,
+		cmd: cmd
+	},
+	datetime: {
+		getDate: getDate,
+		getTime: getTime,
+		getDateTime: getDateTime
+	},
+	fs: {
+		readFile: readFile,
+		writeFile: writeFile,
+		readJSON: readJSON,
+		writeJSON: writeJSON
+	},
+	require: {
+		requireSafely: requireSafely,
+	},
+	text: {
+		countOccurrences: occurrences,
+		isLink: isLink
+	},
+	arrays: {
+		arrayToString: arrayToString,
+		getRandomElement: randomListElem
+	},
+	discord: {
+		getChannelType: getChannelType,
+		getChannelMembers: getGuildMembers,
+		getChannelMembersByName: getUserFromGuildViaNameOrNickname,
+		getAllNamesOf: getAllNamesOf,
+		getNickname: getNicknameDefaultToUsername,
+		setNewBotGame: setNewStatus
+	},
+	commands: {
+		acquireCommands: acquireCommands,
+		acquireHelpString: acquireHelpString,
+		commandSplit: splitTextIntoCommandStolenFromStackOverflow,
+		changeTheme: changeThemeAllChannels,
+		sayRedditData: sendRedditData
+	},
+	keysponses: {
+		getResponse: getResponse,
+		determineMatch: determineMatch,
+		countKeysponses: countKeysponses
+	},
+	debug: {
+		err: err,
+		logToFile: logToFile,
+		objectInfo: objectInfo
+	}
+}

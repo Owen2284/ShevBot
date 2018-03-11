@@ -1,0 +1,316 @@
+{
+	"keysponses": {
+		"fullMatches": [
+			{
+				"keywords": "HELLO",
+				"responses": "Hello world!",
+				"command": "reply"
+			},
+			{
+				"keywords": "SECRET",
+				"responses": "This is a secret message!",
+				"command": "reply"
+			}
+		],
+		"partMatches": [
+			{
+				"keywords": "SHEVBOT",
+				"responses": "That's me!",
+				"command": "send"
+			},
+			{
+				"keywords": "PING",
+				"responses": "Pong!",
+				"command": "send"
+			},
+			{
+				"keywords": "PONG",
+				"responses": "Ping!",
+				"command": "send"
+			},
+			{
+				"keywords": "ENCHILADA",
+				"responses": "ENCHILADA",
+				"command": "send"
+			},
+			{
+				"keywords": "WATERMELON",
+				"responses": "Praise be to the Watermelon.",
+				"command": "send"
+			},
+			{
+				"keywords": "HANZO",
+				"responses": [
+					"Oh Hanzo is a class.",
+					"RYUU GA WAGA TEKI GO FUCK YOURSELF"
+				],
+				"command": "send"
+			},
+			{
+				"keywords": "BASTION",
+				"responses": "NO FUN ALLOWED",
+				"command": "send"
+			},
+			{
+				"keywords": "JUNKRAT",
+				"responses": [
+					"He can be your waifu!",
+					"This motherfucker can jump like MJ.",
+					"5 grenades? No no no no no, make that 6.",
+					"Give into the madness. Become a junk person.",
+					"Just pick Junkrat! Just pick him, he's the best hero IN THE GAME."
+				],
+				"command": "send"
+			},
+			{
+				"keywords": "REINHARDT",
+				"responses": [
+					"Rein<3",
+					"I AM ON THE OBJECTIVE, JOIN ME IN GLORY!",
+					"UNACCEPTABLE. HAMMER DOWN!",
+					"HELLO THERE! REINHARDT, AT YOUR SERVICE."
+				],
+				"command": "send"
+			},
+			{
+				"keywords": "MEI",
+				"responses": [
+					"Mei is bae.",
+					"Mei is not bae.",
+					"Did you mean: \"Satan\"?"
+				],
+				"command": "send"
+			},
+			{
+				"keywords": "MCCREE",
+				"responses": [
+					"It's high noon.",
+					"HIGH NOON.",
+					"Well, it's high noon somewhere.",
+					"DRAW!"
+				],
+				"command": "send"
+			},
+			{
+				"keywords": "PHARAH",
+				"responses": [
+					"Justice rains from above!",
+					"Justice rai-AH.",
+					"Justice r-HEUUUGH.",
+					"Rocket barrage incoming!"
+				],
+				"command": "send"
+			},
+			{
+				"keywords": "MERCY",
+				"responses": [
+					"Mercy on call!",
+					"Heroes never die!",
+					"Heroes never die... for a price.",
+					"HELP ME."
+				],
+				"command": "send"
+			},
+			{
+				"keywords": "LUCIO",
+				"responses": [
+					"Oh let's break it down!",
+					"Let's drop the beat!",
+					"Yeah, amp it up!",
+					"Look at this team, we're gonna do great!"
+				],
+				"command": "send"
+			},
+			{
+				"keywords": "WIDOWMAKER",
+				"responses": [
+					"Widowmaker here.",
+					"WHEN I WAS A LITTLE GIRL, I WAS AFRAID OF SPIDERS.",
+					"AT ZE TIME OF ZE KILL, ZEY ARE NEVER MORE ALIVE.",
+					"Le 360 no scope."
+				],
+				"command": "send"
+			},
+			{
+				"keywords": "SOLDIER 76",
+				"responses": [
+					"We're all soldiers now.",
+					"Young brats, get off my lawn!",
+					"This old dog still knows a few tricks.",
+					"I'VE GOT YOU IN MY SIGHTS."
+				],
+				"command": "send"
+			},
+			{
+				"keywords": "TORBJORN",
+				"responses": [
+					"Torbjorn, ready to work!",
+					"Did you mean \"Q to win\"?",
+					"MOLTEN BOOOOOORE!",
+					"Did you mean \"Torjborj\"?"
+				],
+				"command": "send"
+			},
+			{
+				"keywords": "MARCUS",
+				"responses": "B-b-b-b-b-b-b-b-b-b-b-b-but Marcus!",
+				"command": "send"
+			},
+			{
+				"keywords": "DAT BOI",
+				"responses": "Oh shit whaddup!",
+				"command": "send"
+			},
+			{
+				"keywords": "ROY",
+				"responses": "Roy's my Boy!",
+				"command": "send"
+			},
+			{
+				"keywords": "JOHN CENA",
+				"responses": "DOOT DOOT-DOOT DOOT",
+				"command": "send"
+			},
+			{
+				"keywords": [
+					"SONIC",
+					"SANIC"
+				],
+				"responses": [
+					"I must proceed at a fast velocity.",
+					"My velocity is determined by acceleration over time.",
+					"GOTTAM GOED FSAT.",
+					"https://www.youtube.com/watch?v=hU7EHKFNMQg"
+				],
+				"command": "send"
+			},
+			{
+				"keywords": "9/11",
+				"responses": [
+					"9/11 was an inside job!",
+					"7/11 was a part time job!"
+				],
+				"command": "send"
+			},
+			{
+				"keywords": [
+					"JET FUEL",
+					"STEEL BEAM"
+				],
+				"responses": [
+					"JET FUEL CAN'T MELT STEEL BEAMS.",
+					"JET FUEL CAN'T MELT DANK MEMES.",
+					"https://www.youtube.com/watch?v=xsTyjVnZBww",
+					"ICEBERGS CAN'T CUT STEEL HULLS."
+				],
+				"command": "send"
+			},
+			{
+				"keywords": "NERO",
+				"responses": "Oh Brother NEEEEEEERO.",
+				"command": "send"
+			},
+			{
+				"keywords": "BOAT",
+				"responses": [
+					"IT'S A DILAPIDATED BOAT.",
+					"No, not just a boat, but Skarsgard!"
+				],
+				"command": "send"
+			},
+			{
+				"keywords": "BENJAMIN",
+				"responses": "Senor Benjamin!",
+				"command": "send"
+			},
+			{
+				"keywords": "TRUMP",
+				"responses": [
+					"CAN'T STUMP THE TRUMP.",
+					"We need to build a wall!"
+				],
+				"command": "send"
+			},
+			{
+				"keywords": "MARK",
+				"responses": [
+					"Oh hi, Mark.",
+					"Hahaha, what a funny story Mark!"
+				],
+				"command": "send"
+			},
+			{
+				"keywords": [
+					"NAVY SEALS",
+					"KIDDO"
+				],
+				"responses": "What the fuck did you just fucking say about me, you little bitch? I’ll have you know I graduated top of my class in the Navy Seals, and I’ve been involved in numerous secret raids on Al-Quaeda, and I have over 300 confirmed kills. I am trained in gorilla warfare and I’m the top sniper in the entire US armed forces. You are nothing to me but just another target. I will wipe you the fuck out with precision the likes of which has never been seen before on this Earth, mark my fucking words. You think you can get away with saying that shit to me over the Internet? Think again, fucker. As we speak I am contacting my secret network of spies across the USA and your IP is being traced right now so you better prepare for the storm, maggot. The storm that wipes out the pathetic little thing you call your life. You’re fucking dead, kid. I can be anywhere, anytime, and I can kill you in over seven hundred ways, and that’s just with my bare hands. Not only am I extensively trained in unarmed combat, but I have access to the entire arsenal of the United States Marine Corps and I will use it to its full extent to wipe your miserable ass off the face of the continent, you little shit. If only you could have known what unholy retribution your little “clever” comment was about to bring down upon you, maybe you would have held your fucking tongue. But you couldn’t, you didn’t, and now you’re paying the price, you goddamn idiot. I will shit fury all over you and you will drown in it. You’re fucking dead, kiddo.",
+				"command": "send"
+			},
+			{
+				"keywords": "HACK",
+				"responses": "I'm in.",
+				"command": "send"
+			},
+			{
+				"keywords": "HARAMBE",
+				"responses": "Dicks out for Harambe.",
+				"command": "send"
+			},
+			{
+				"keywords": "PASSWORD",
+				"responses": "The password is \"lewisisgay\".",
+				"command": "send"
+			},
+			{
+				"keywords": "LENNY",
+				"responses": "( ͡° ͜ʖ ͡°)",
+				"command": "send"
+			},
+			{
+				"keywords": "COPYPASTA",
+				"responses": "Ju think the ira has a group chat with all the lads on it?",
+				"command": "send"
+			},
+			{
+				"keywords": [
+					"BRAUN",
+					"STROWMAN"
+				],
+				"responses": "I'M NOT FINISHED WITH YOU",
+				"command": "reply"
+			},
+			{
+				"keywords": "MAMA",
+				"responses": "Hey how you doin lil mama? lemme whisper in your ear\nTell you sunthing that you might like to hear\nYou got a sexy ass body and your ass look soft\nMind if i touch it? and see if its soft\nNaw i'm jus playin' lets just say i can\nAnd im known to be a real nasty man\nAnd they say a closed mouth dont get fed\nSo i dont mind asking for your head\nYou heard what i said, we need to make our way to the bed\nAnd you can start usin' yo head\nYou like to fuck, have yo legs open all in da butt\nDo it up slappin ass cuz the sex gets rough\nSwitch the positions and ready to get down to business\nSo you can see what you've been missin'\nYou might had some but you never had none like this\nJust wait til you see my dick",
+				"command": "pm"
+			}
+		]
+	},
+	"swears": {
+		"swearlist": [
+			"FUCK",
+			"SHIT",
+			"CUNT",
+			"DICK",
+			"TWAT",
+			"ARSE",
+			"PISS",
+			"COCK",
+			"WANK",
+			"SLAG",
+			"WHORE",
+			"NIGGA"
+		],
+		"counter": 594
+	},
+	"reacts": {
+		"counter": 89
+	},
+	"greetings": {
+		"channelsToGreet": [
+			"BOT"
+		],
+		"counter": 194
+	}
+}

@@ -70,25 +70,54 @@
 [X] Internal: Added ability for bot to PM users.
 [X] Other: Bot now displays various actions as the game it is playing.
 
-2.4.0 - Management Update
+2.4.0 - Commands Update
 -----
-[ ] Internal: New functions to simplify code (find guild user by username/nickname, get channel type)
-[ ] Internal: New command fields (needsGuild, minimumArgs, aliases, delete initial command call, examples, etc.)
-[ ] Internal: New command structure (collected into various folders)
-[ ] Internal: Created GUI for viewing and managing ShevBot's state.
-[ ] Internal: Added check that ensures all data files exist before launching.
-[ ] Internal: Added check to ensure custom .js files compile before launching.
-[ ] Internal: Added that tracks permissions and actions to do per server.
+[ ] Updated command: HELP - Can now specify a command and view more detail about it.
+[ ] Updated command: HELP - Changed formatting to use Markdown.
+[X] Command system: New command fields (needsGuild, minimumArgs, aliases, delete initial command call, examples, etc.)
+[X] Command system: New command structure (collected into various folders)
+[X] Command system: Commands now take a "manifest" argument instead of many others (message, channel, etc.)
+[X] Command system: Bot now logs commands loaded in to the console, plus any failures in loading. 
+[X] Command system: Commands now check if neccessary packages and permissions are obtained before execution, along with minimum arguments, and appropriate channel usage.
+[X] Command system: Commands can delete the call to the ShevBot command if they have permissions and are set to do so.
+[X] Command system: Commands can now provide usage examples via the examples field.
+[X] Command system: Commands can provide aliases that can be used in place of the normal command call.
+[X] Command system: Some commands previously only usable in a guild can now be used in a DM channel.
+[X] Command system: Auto-disable broken commands (e.g. on crash)
+[X] Tools package: Removed message archiving and purged records.
+[X] Tools package: New functions to simplify code (find guild user by username/nickname, get channel type)
+[X] Tools package: Exports from tools.js are now in a heirarchical structure, and references have been updated accordingly.
+[ ] Internal: Added check that ensures all data files/directories exist before launching.
+[X] Internal: Added check to ensure custom .js files compile before launching.
+[ ] Internal: Added system that tracks permissions and actions to do per server.
+[ ] Internal: ShevBot checks that each server provides the basic requirements for standard operation (defined in bot.json)
 [ ] Internal: Improved amount of data provided via the command console (on/off notifications, channel changes, who ran commands, etc.)
-[ ] Internal: Data written to command prompt is now also written to the day's log file.
+[X] Internal: Removed unnecessary posts to the command console.
+[X] Internal: Data written to command prompt is now also written to the day's log file.
+[X] Internal: Bot now stores its token in bot.json.
+[X] Internal: Bot now defines its minimum required permissions to run on a server in bot.json.
+[X] Internal: Catches added for invalid token, missing vital packages(e.g. tools), EmojiList errors, etc.
+[X] Internal: Errors now written to error file rather than console.
+[X] Internal: prep.js created to store functions that are run on bot launch.
+[X] Internal: events.js created to store functions that bot calls upon events.
+[X] Internal: operations.js created to store evaluation functions.
 [ ] Bug Fix: ShevBot now correctly closes when connection is lost, rather than "soft-dying".
+[ ] Bug Fix: Solved numerous unhandled Promise issues.
+[X] Other: Greeting now displays total available commands and serving servers.
+[X] Other: Various new bot games added.
+[X] Other: Upgraded to Visual Studio Code IDE.
+
+2.4.1 - GUI Update
+-----
+[ ] Internal: Created GUI for viewing and managing ShevBot's state.
 
 2.5.0 - Shitposting Update
 -----
 [ ] New command: SHITPOST - Creates a random message based on previous messages sent by a user.
 [ ] Updated command: THEME - Users can now create custom themes, and themes can now be given functions to alter their speech patters (capitalisation, word swapping, etc.)
-[ ] Fixed command: THEME - ShevBot no longer crashes on missing images.
 [ ] Fixed command: REFRESH - Commands now update as well.
+[ ] Fixed command: VOICE - Can now switch between channels.
+[ ] Bug Fix: ShevBot no longer crashes on missing images when running THEME.
 
 
 Potential Future Features

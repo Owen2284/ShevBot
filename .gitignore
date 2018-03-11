@@ -1,2 +1,8 @@
 node_modules/
 bin/
+.vscode/
+ava/
+err/
+log/
+mus/
+sou/

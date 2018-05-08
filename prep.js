@@ -56,7 +56,7 @@ function compileCheck(data) {
 //#region Details and Data
 function getDetails() {
     return {
-        versionNumber: "2.3.1 (inDev)",
+        versionNumber: "2.4.0",
         repo: "https://github.com/Owen2284/ShevBot",
         commandCharacter: "+",
         commandDir: "com/",

@@ -3,7 +3,7 @@
 ShevBot
 Created on 3rd August 2016
 
-Current Version: v2.3.1
+Current Version: v2.4.0
 
 Backend for my Discord bot, ShevBot.
 

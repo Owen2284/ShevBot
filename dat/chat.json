@@ -302,15 +302,15 @@
 			"WHORE",
 			"NIGGA"
 		],
-		"counter": 594
+		"counter": 605
 	},
 	"reacts": {
 		"counter": 89
 	},
 	"greetings": {
 		"channelsToGreet": [
-			"BOT"
+			"ROKO"
 		],
-		"counter": 194
+		"counter": 196
 	}
 }

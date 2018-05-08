@@ -73,8 +73,13 @@ const log = Tools.comms.cmd;
 const err = Tools.debug.err;
 
 // Commands.
-var commands = Tools.commands.acquireCommands(details.commandDir);
-if (commands == null || commands == undefined || commands.length == 0) {log("warn", "No valid commands were loaded in.");}
+try {
+	var commands = Tools.commands.acquireCommands(details.commandDir);
+	if (commands == null || commands == undefined || commands.length == 0) {log("warn", "No valid commands were loaded in.");}
+} catch (e) {
+	log("warn", "No valid commands were loaded in.");
+	err(e, details.errorDir);
+}
 
 // Settings
 var settings = Prep.getDefaultSettings();

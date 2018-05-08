@@ -72,8 +72,9 @@
 
 2.4.0 - Commands Update
 -----
-[ ] Updated command: HELP - Can now specify a command and view more detail about it.
-[ ] Updated command: HELP - Changed formatting to use Markdown.
+[X] New command: SWEARS - Shows the swear counter.
+[X] Updated command: HELP - Can now specify a command and view more detail about it.
+[X] Updated command: HELP - Changed formatting to use Markdown.
 [X] Command system: New command fields (needsGuild, minimumArgs, aliases, delete initial command call, examples, etc.)
 [X] Command system: New command structure (collected into various folders)
 [X] Command system: Commands now take a "manifest" argument instead of many others (message, channel, etc.)
@@ -87,6 +88,7 @@
 [X] Tools package: Removed message archiving and purged records.
 [X] Tools package: New functions to simplify code (find guild user by username/nickname, get channel type)
 [X] Tools package: Exports from tools.js are now in a heirarchical structure, and references have been updated accordingly.
+[X] Swear counter: No longer alerts on every swear.
 [X] Internal: Added check to ensure custom .js files compile before launching.
 [X] Internal: Removed unnecessary posts to the command console.
 [X] Internal: Data written to command prompt is now also written to the day's log file.

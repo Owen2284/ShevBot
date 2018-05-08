@@ -628,6 +628,7 @@ function acquireCommands(commandDir) {
 						else {fieldCheck = false; failedFields.push("Whole command is null/undefined.");}
 						if (fieldCheck) {
 							// Accept the command.
+							commandToTest.category = currentCat;
 							categoryCommands.push(commandToTest);
 							counters[0].push(commandFile);
 							cmd(CONSOLE_TAG, " " + commandFile + " successfully loaded in.");
@@ -672,9 +673,111 @@ function acquireCommands(commandDir) {
 	return allCommands; 
 }
 
-// Function that generates the help string for the HELP function.
-function acquireHelpString(commandList) {
+// Function that generates the help string for the HELP function. Doesn't account for message length limits.
+function getFullHelpString(commandList, author, commandCharacter) {
 
+	// Storage variables.
+	var helpString = "Hi " + author + ", here are all of my commands! Type **" + commandCharacter + "HELP** along with the names of any commands you want to know more about (e.g. **" + commandCharacter + "HELP** GAME THEME)"
+	var categoriesToDo = [];
+	var commandsToDo = [];
+	var commandsSoon = [];
+
+	// Store all of the categories and commands.
+	helpString += "\n\n";
+	for (var com in commandList) {
+		var commandObject = commandList[com];
+		if (commandObject.visible) {
+			if (commandObject.active) {
+				commandsToDo.push(com);
+				if (categoriesToDo.indexOf(commandObject.category) == -1) {
+					categoriesToDo.push(commandObject.category);
+				}
+			} else {
+				commandsSoon.push(com);
+			}
+		}
+	}
+
+	for (var cat in categoriesToDo) {
+
+		// Construct category header.
+		var headerString = categoriesToDo[cat] + " Commands";
+		helpString += "__**" + headerString + "**__\n\n";
+
+		// Add commands of the category.
+		//var commandsToRemove = [];
+		for (var com in commandsToDo) {
+			var commandObject = commandList[commandsToDo[com]];
+			var extra1 = ""; if (!commandObject.complete) {extra1 = "(IN DEV)";}
+			if (commandObject.category == categoriesToDo[cat]) {
+				helpString += "**" + commandCharacter + commandObject.aliases[0] + "** " 
+					+ commandObject.params + "\t" + extra1 + "\n"; 
+				//commandsToRemove = commandsToDo[com];
+			}
+		}
+		helpString += "\n";
+		
+	}
+
+	// Add the coming soon section.
+	if (commandsSoon.length > 0) {
+		helpString += "__**Coming Soon!**__\n";
+		for (var i = 0; j = commandsSoon.length, i<j; i++) {
+			if (i<j-1) {
+				helpString += commandList[commandsSoon[i]].aliases[0] + ", ";
+			} else {
+				helpString += commandList[commandsSoon[i]].aliases[0];
+			}
+		}
+		helpString += "\n";
+	}
+
+	return helpString;
+}
+
+// Gets help information for a specific command.
+function getSpecificHelpString(commandList, commandName, commandCharacter, showDetailedHelp) {
+	// Search through the currently stored commands to determine if a valid command was entered.
+	var commandObject = null;
+	var aliasIndex = -1;
+    for (var i in commandList) {
+		var thisCommandHere = commandList[i];
+		var thisAliasIndexHere = thisCommandHere.aliases.indexOf(commandName.toUpperCase());
+        if (thisAliasIndexHere >= 0 && thisCommandHere.active) {
+			commandObject = thisCommandHere;
+			aliasIndex = thisAliasIndexHere;
+            break;
+        }
+	}
+	
+	if (commandObject != null) {
+		// Storage variables.
+		var helpString = "Here's some info on the **" + commandCharacter + commandObject.aliases[aliasIndex] + "** command:\n";
+
+		helpString += "**Name**: " + commandCharacter + commandObject.aliases[0] + "\n";
+		helpString += "**Aliases**: " + commandObject.aliases.splice(1).join(", ") + "\n";
+		helpString += "**Parameters**: " + commandObject.params + "\n\n";
+
+		helpString += "**Description**: " + commandObject.description + "\n";
+		helpString += "**Category**: " + commandObject.category + "\n";		
+		helpString += "**Examples**: \"" + commandObject.examples.join("\", \"") + "\"\n\n";
+
+		helpString += "**Minimum required arguments**: " + commandObject.minArgs + "\n";		
+		helpString += "**Usable in guild channels**: " + commandObject.guild + "\n";
+		helpString += "**Usable in DM channels**: " + commandObject.pm + "\n";
+		helpString += "**Command call deleted after completion**: " + commandObject.deleteCall + "\n\n";
+
+		if (showDetailedHelp) {
+			helpString += "**Permissions required by bot**: " + commandObject.botPermissions.join(", ") + "\n";
+			helpString += "**Permissions required by user**: " + commandObject.userPermissions.join(", ") + "\n";
+			helpString += "**Node.js packages required**: " + commandObject.packages.join(", ") + "\n\n";
+		}
+
+		return helpString;
+	}
+	else {
+		return "Sorry, but I couldn't find the **" + commandCharacter + commandName.toUpperCase() + "** command."
+	}
 }
 
 
@@ -716,7 +819,8 @@ module.exports = {
 	},
 	commands: {
 		acquireCommands: acquireCommands,
-		acquireHelpString: acquireHelpString,
+		getFullHelpString: getFullHelpString,
+		getSpecificHelpString: getSpecificHelpString,
 		commandSplit: splitTextIntoCommandStolenFromStackOverflow,
 		changeTheme: changeThemeAllChannels,
 		sayRedditData: sendRedditData

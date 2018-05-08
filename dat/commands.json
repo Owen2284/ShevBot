@@ -27,7 +27,8 @@
 			"COPYPASTA",
 			"TRUMP",
 			"ROY",
-			"HACK"
+			"HACK",
+			"SONIC"
 		],
 		"responses": [
 			"Hello world!",
@@ -140,10 +141,10 @@
 			}
 		],
 		"currentTheme": {
-			"name": "WrestlingBot",
-			"image": "ava/husky.png",
-			"greeting": "WrestlingBot v#VERSION is here to lay the smackdown on some fools!",
-			"change": "AW FORT LAUDY DAUDY! YOU'VE GOT TO FEEL IT IN YOUR BODY! COME ON NOW, AND FEEL. THE. POOOOOOOOOOWER!"
+			"name": "ShevBot",
+			"image": "ava/default.jpg",
+			"greeting": "ShevBot v#VERSION ready to serve! I'm currently helping out #SERVERS servers with my #COMMANDS commands!",
+			"change": "Understood, activating ShevBot!"
 		}
 	},
 	"GAME": {

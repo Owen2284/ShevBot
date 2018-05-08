@@ -55,37 +55,38 @@ function evaluateCommand(message, sender, channel, command, bot, commands, data,
                     // Constructing manifest.
                     var manifest = {
                         message: {
-                            message: message,
-                            raw: message.content,
-                            upper: message.content.toUpperCase(),
-                            lower: message.content.toLowerCase(),
-                            link: Tools.text.isLink(message.content)
+                            message: message,                           // Mesage object
+                            raw: message.content,                       // Raw text in the message
+                            upper: message.content.toUpperCase(),       // Uppercase message
+                            lower: message.content.toLowerCase(),       // Lowercase message
+                            link: Tools.text.isLink(message.content)    // Wherer or not the message is likely a link
                         },
                         channel: {
-                            channel: channel,
-                            guild: channel.guild,
-                            type: commandChannel
+                            channel: channel,                   // Channel message was sent on
+                            guild: channel.guild,               // Guild (server) of the channel
+                            type: commandChannel                // Type of channel (Guild, text, DM or group DM)
                         },
                         author: {
-                            author: sender,
-                            bot: sender.bot
+                            author: sender,                     // Sender of message
+                            bot: sender.bot                     // Is author a bot or not
                         },
                         command: {
-                            name: commandName,
-                            canon: commandObject.aliases[0],
-                            args: command.slice(1),
-                            numArgs: command.slice(1).length,
-                            full: command
+                            name: commandName,                  // Command name (e.g. HELP, TIME)
+                            canon: commandObject.aliases[0],    // Canon version of name instead of alias used
+                            args: command.slice(1),             // List of command arguments
+                            numArgs: command.slice(1).length,   // Number of arguments
+                            full: command                       // Entire command array
                         },
                         datetime: {
-                            time: Tools.datetime.getTime(),
-                            date: Tools.datetime.getDate()
+                            time: Tools.datetime.getTime(),     // Send time
+                            date: Tools.datetime.getDate()      // Send date
                         }
                     };
                     // Running the command.
                     commandObject.process(bot, manifest, data, settings, details, commands);
                     //Delete call message if necessary.
-                    if (commandObject.deleteCall && message.guild.member(bot.user).hasPermission("MANAGE_MESSAGES")) {message.delete();}		// TODO: Fix
+                    var canDelete = commandChannel == "Guild" && message.guild.member(bot.user).hasPermission("MANAGE_MESSAGES")
+                    if (commandObject.deleteCall && canDelete) {message.delete();}		// TODO: Fix
                     // Logging.
                     log("command", sender.username + " ran command " + details.commandCharacter + commandID + " successfully.");
                 } 
@@ -209,7 +210,6 @@ function evaluateSwears(message, sender, channel, text, data, details) {
             for(swe = 0; swe < swearsFound.length; swe++) {
                 data.chat["swears"]["counter"] += Tools.text.countOccurrences(text.toUpperCase(), swearsFound[swe], true);
             }
-            say("send", message, "Current swear counter: " + data.chat["swears"]["counter"]);
             writeJSON(details.dataDir + "chat.json", data.chat);
         }
     } catch (e) {

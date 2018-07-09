@@ -132,3 +132,4 @@ Add check to NICKNAME to see if name can be changed.
 Fix help bug if HELP > 2000 chars.
 Add ability to specify the command that users want HELP for.
 Add markdown features to HELP.
+Add code to create bot file if missing

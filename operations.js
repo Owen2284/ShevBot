@@ -102,14 +102,14 @@ function evaluateCommand(message, sender, channel, command, bot, commands, data,
                 }
             } else {
                 // Outputting failure message.
-                var failureMessage = "Sorry, I couldn't run " + details.commandCharacter + commandName + "for you, because:\n";
+                var failureMessage = "Sorry, I couldn't run " + details.commandCharacter + commandName + " for you, because:\n";
                 var failedChecks = "";
                 if (!argsCheck) {
                     failureMessage += " This command requires at least " + commandObject.minArgs + " arguments for it to be run.\n";
                     failedChecks += "Minimum Arguments, ";
                 }
                 if (!channelCheck) {
-                    failureMessage += " This command can't be run in a " + (commandChannel == "Text" ? "Guild" : "DM") + " channel.";
+                    failureMessage += " This command can't be run in a " + (commandChannel == "Text" ? "server" : "DM") + " channel.";
                     failedChecks += "Channel, ";
                 }
                 if (!activeCheck) {

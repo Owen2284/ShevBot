@@ -1,5 +1,6 @@
 const Tools = require("./../../tools.js");
 const fs = require("fs");
+const path = require("path");
 
 const say = Tools.comms.say;
 const cmd = Tools.comms.cmd;
@@ -25,11 +26,11 @@ module.exports = {
 		const input = manifest.command.full;
 		switch(input[1].toUpperCase()) {
 			case "JOIN":
-				if (bot.voiceConnections.array().length == 0) {
+				if (bot.voice.connections.array().length == 0) {
 					if (input.length > 2) {
 						var targetChannelRaw = manifest.message.raw.substring(1 + input[0].length + 1 + input[1].length + 1);
 						var targetChannelUpp = targetChannelRaw.toUpperCase();
-						var channelsChannels = manifest.channel.guild.channels.array();
+						var channelsChannels = manifest.channel.guild.channels.cache.array();
 						var joined = false;
 						var joinedName = "general";
 						for (chch = 0; chch < channelsChannels.length; chch++) {
@@ -51,35 +52,35 @@ module.exports = {
 					} else {
 						say("send", message, "Please enter a voice channel on this server after \"" + details.commandCharacter + "VOICE JOIN\".");
 					} 
-				} else if (bot.voiceConnections.array().length == 1) {
-					say("send", message, "Sorry, I'm already speaking on \"" + bot.voiceConnections.array()[0].channel.name + "\".");
+				} else if (bot.voice.connections.array().length == 1) {
+					say("send", message, "Sorry, I'm already speaking on \"" + bot.voice.connections.array()[0].channel.name + "\".");
 				} else {
 					cmd("voice", "ShevBot is currently on > 1 voice channel. This is bad.");
 				} break;
 			case "SWITCH":
 				say("send", message, "Sorry, I haven't had that command programmed in yet!");
 			case "LEAVE":
-				if (bot.voiceConnections.array().length == 1) {
+				if (bot.voice.connections.array().length == 1) {
 					if (settings.currentStreamDispatcher != null) {settings.currentStreamDispatcher.end(); settings.currentStreamDispatcher == null;}
-					var currentChannel = bot.voiceConnections.array()[0].channel;
+					var currentChannel = bot.voice.connections.array()[0].channel;
 					currentChannel.leave();
 					cmd("voice", "Left voice channel \"" + currentChannel.name + "\".");
 					say("send", message, "I have stopped taking on the voice channel \"" + currentChannel.name + "\".");
-				} else if(bot.voiceConnections.array().length == 0) {
+				} else if(bot.voice.connections.array().length == 0) {
 					say("send", message, "Sorry, I'm not speaking on a voice channel at the moment.");
 				} else {
 					cmd("whoops", "ShevBot is currently on > 1 voice channel. This is bad.");
 				} break;
 			case "SPEAK":
-				if (bot.voiceConnections.array().length == 1) {
-					var currentConnection = bot.voiceConnections.array()[0];
+				if (bot.voice.connections.array().length == 1) {
+					var currentConnection = bot.voice.connections.array()[0];
 					var soundFileNames = fs.readdirSync(details.soundDir);
 					var soundToPlay = soundFileNames[Math.floor((Math.random() * soundFileNames.length))];
-					var soundToPlayDir = details.soundDir + soundToPlay;
+					var soundToPlayAbsolutePath = path.join(__dirname, details.soundDir + soundToPlay);
 					if (settings.currentStreamDispatcher != null) {settings.currentStreamDispatcher.end(); settings.currentStreamDispatcher == null;}
-					settings.currentStreamDispatcher = currentConnection.playFile(soundToPlayDir, {volume:"0.25"});
+					settings.currentStreamDispatcher = currentConnection.play(soundToPlayAbsolutePath, {volume: "0.25" });
 					cmd("voice", "Playing \"" + soundToPlay + "\"");
-				} else if(bot.voiceConnections.array().length == 0) {
+				} else if(bot.voice.connections.array().length == 0) {
 					say("send", message, "Sorry, I'm not speaking on a voice channel at the moment.");
 				} else {
 					cmd("whoops", "ShevBot is attempting to speak on more than one channel. Stopping speak request.");

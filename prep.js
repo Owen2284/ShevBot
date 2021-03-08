@@ -69,6 +69,10 @@ function getDetails() {
     }
 }
 
+function getConfig() {
+    return JSON.parse(fs.readFileSync("config.json", "utf8"));
+}
+
 function getData() {
     const details = getDetails();
     return {
@@ -208,6 +212,7 @@ function writeFile(path, fileString, output = false) {
 
 //#region Exports
 
+exports.getConfig = getConfig;
 exports.getData = getData;
 exports.getDetails = getDetails;
 exports.getDefaultSettings = getDefaultSettings;

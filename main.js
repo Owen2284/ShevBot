@@ -35,6 +35,7 @@ if (directoryResult != null) {
 }
 
 // Files
+var config = Prep.getConfig();
 var data = Prep.getData();
 
 // Custom code compilation test.
@@ -109,9 +110,9 @@ setInterval(Events.repeatEveryHour, 60 * MINUTE);
 
 // Activate the bot.
 try {
-	bot.login(data.bot["token"]);
+	bot.login(config["token"]);
 } catch (e) {
-	log("FATAL", "Invalid token provided for bot connection, please check " + details.dataDir + "bot.json and ensure the \"token\" field is set.");
+	log("FATAL", "Invalid token provided for bot connection, please check that config.json exists and ensure the \"token\" field is set.");
 	err(e, details.errorDir);
 	bot.destroy();
 	process.exit(1);

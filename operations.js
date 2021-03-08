@@ -227,8 +227,8 @@ function evaluateReactions(message, sender, channel, text, data, details, emojis
             var q = Math.random();
 
             if (q < reactChance) {
-                var emojiNumber = Math.floor(Math.random() * EmojiList.length);
-                message.react(EmojiList[emojiNumber]);
+                var emojiNumber = Math.floor(Math.random() * emojis.length);
+                message.react(emojis[emojiNumber]);
                 ++data.chat["reacts"]["counter"];
                 log("react", "Reacted to message.");
                 writeJSON(details.dataDir + "chat.json", data.chat);

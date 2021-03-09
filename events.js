@@ -61,7 +61,7 @@ function onMessage(bot, data, commands, details, settings, emojis, message) {
 			Operations.evaluateCommand(message, sender, channel, command, bot, commands, data, details, settings);
 		} else {
 			Operations.evaluateKeysponses(message, sender, channel, raw, data, details);
-			Operations.evaluateReactions(message, sender, channel, raw, data, details, emojis);
+			Operations.evaluateReactions(message, sender, channel, raw, data, details, emojis, bot);
 			Operations.evaluateSwears(message, sender, channel, raw, data, details);
 		}
 	}

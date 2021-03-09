@@ -219,18 +219,39 @@ function evaluateSwears(message, sender, channel, text, data, details) {
 
 }
 
-function evaluateReactions(message, sender, channel, text, data, details, emojis) {
+function evaluateReactions(message, sender, channel, text, data, details, emojis, bot) {
 
     if (emojis != null) {
         try {
-            var reactChance = 0.05;
-            var q = Math.random();
+            var reactChance = 1;
+            var multiReactChance = 0.50;
+            var guildReactChance = 0.20;
+            let reactCount = 0;
 
-            if (q < reactChance) {
-                var emojiNumber = Math.floor(Math.random() * EmojiList.length);
-                message.react(EmojiList[emojiNumber]);
-                ++data.chat["reacts"]["counter"];
-                log("react", "Reacted to message.");
+            if (Math.random() < reactChance) {
+                const standardEmoji = emojis;
+                const guildEmoji = bot.emojis.cache.array().filter(i => !i.animated);
+
+                const usedEmoji = [];
+                do {
+                    let reactionEmoji = null;
+                    do {
+                        if (Math.random() < guildReactChance) {
+                            reactionEmoji = guildEmoji[Math.floor(Math.random() * guildEmoji.length)];
+                        }
+                        else {
+                            reactionEmoji = standardEmoji[Math.floor(Math.random() * standardEmoji.length)];
+                        }                        
+                    } while (usedEmoji.includes(reactionEmoji));
+                    usedEmoji.push(reactionEmoji);
+
+                    log("react", "Reacted to message with \"" + reactionEmoji.toString() + "\" .");
+	                message.react(reactionEmoji);
+
+                    ++data.chat["reacts"]["counter"];
+                    ++reactCount;
+                } while (Math.random() < multiReactChance && reactCount < 20);
+                log("react", "Reacted to message " + reactCount + " time(s).");
                 writeJSON(details.dataDir + "chat.json", data.chat);
             }
         } catch (e) {

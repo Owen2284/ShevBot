@@ -288,7 +288,6 @@ function changeThemeAllChannels(bot, data) {
 
 	// Notifying console.
 	cmd("themes", "Theme changed to " + data.commands["THEME"]["currentTheme"]["name"] + ".");
-
 }
 
 // Command for splitting input into command array, with respect for speech marks.
@@ -449,7 +448,7 @@ function randomListElem(list) {
 function setNewStatus(bot, data) {
 	var gameList = data.bot["games"];
 	var newGame = randomListElem(gameList);
-	bot.user.setGame(newGame);
+	bot.user.setActivity(newGame);
 	cmd("game", "Game changed to \"" + newGame + "\".");
 }
 

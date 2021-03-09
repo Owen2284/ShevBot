@@ -2,6 +2,7 @@
 
 const Tools = require("./tools.js");
 const Operations = require("./operations.js");
+const { cmd } = require("./prep.js");
 
 const log = Tools.comms.cmd;
 const err = Tools.debug.err;
@@ -12,16 +13,15 @@ const commandSplit = Tools.commands.commandSplit;
 // Ready event handler, greets allowed channels.
 function onReady(bot, data, details, settings, commands) {
     if (settings.initialBoot) {
-        
         // Increment the boot count.
         data.bot["boot"] = data.bot["boot"] + 1;
         writeJSON(details.dataDir + "bot.json", data.bot);
 
         // Run greeting code.
         if (!settings.debug) {
-            var channelArr = bot.channels.array();
+            var channelArr = bot.channels.cache.array();
             var commandCount = commands.length;
-            var greetingString = data.commands["THEME"]["currentTheme"]["greeting"].replace("#VERSION", details.versionNumber).replace("#SERVERS", bot.guilds.array().length).replace("#COMMANDS", commandCount);
+            var greetingString = data.commands["THEME"]["currentTheme"]["greeting"].replace("#VERSION", details.versionNumber).replace("#SERVERS", bot.guilds.cache.array().length).replace("#COMMANDS", commandCount);
             for (var i in channelArr) {
                 var currentChannel = channelArr[i];
                 if (Tools.discord.getChannelType(currentChannel) === "Text") {
@@ -61,7 +61,7 @@ function onMessage(bot, data, commands, details, settings, emojis, message) {
 			Operations.evaluateCommand(message, sender, channel, command, bot, commands, data, details, settings);
 		} else {
 			Operations.evaluateKeysponses(message, sender, channel, raw, data, details);
-			Operations.evaluateReactions(message, sender, channel, raw, data, details, emojis);
+			Operations.evaluateReactions(message, sender, channel, raw, data, details, emojis, bot);
 			Operations.evaluateSwears(message, sender, channel, raw, data, details);
 		}
 	}
@@ -83,7 +83,7 @@ function onErrors(m) {
 
 function onDebug(settings, m) {
     if (settings.debug) {
-        log("debug", m.toString());
+        log("debug", m);
     }
 }
 

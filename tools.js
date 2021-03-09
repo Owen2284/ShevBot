@@ -762,9 +762,9 @@ function getSpecificHelpString(commandList, commandName, commandCharacter, showD
 		helpString += "**Examples**: \"" + commandObject.examples.join("\", \"") + "\"\n\n";
 
 		helpString += "**Minimum required arguments**: " + commandObject.minArgs + "\n";		
-		helpString += "**Usable in guild channels**: " + commandObject.guild + "\n";
-		helpString += "**Usable in DM channels**: " + commandObject.pm + "\n";
-		helpString += "**Command call deleted after completion**: " + commandObject.deleteCall + "\n\n";
+		helpString += "**Usable in server channels**: " + (commandObject.guild ? "Yes" : "No") + "\n";
+		helpString += "**Usable in DM channels**: " + (commandObject.pm ? "Yes" : "No") + "\n";
+		helpString += "**Command call deleted after completion**: " + (commandObject.deleteCall ? "Yes" : "No") + "\n\n";
 
 		if (showDetailedHelp) {
 			helpString += "**Permissions required by bot**: " + commandObject.botPermissions.join(", ") + "\n";

@@ -225,7 +225,7 @@ function evaluateReactions(message, sender, channel, text, data, details, emojis
         try {
             var reactChance = 1;
             var multiReactChance = 0.50;
-            var guildReactChance = 0.20;
+            var guildReactChance = 0.20; 
             let reactCount = 0;
 
             if (Math.random() < reactChance) {

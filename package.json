@@ -7,16 +7,7 @@
     "shevbot": "ShevBot.js"
   },
   "dependencies": {
-    "@discordjs/opus": "^0.4.0",
-    "casual": "^1.6.2",
-    "discord.js": "^12.5.1",
-    "emojis-list": "^3.0.0",
-    "installed-packages": "^1.0.9",
-    "moniker": "^0.1.2",
-    "node-datetime": "^2.1.2",
-    "request": "^2.88.2",
-    "syntax-error": "^1.4.0",
-    "youtube-node": "^1.3.3"
+    "discord.js": "^12.5.1"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

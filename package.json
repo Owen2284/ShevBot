@@ -1,16 +1,13 @@
 {
-  "name": "shevbot",
-  "version": "2.4.0",
+  "name": "shevbot-2",
+  "version": "1.0.0",
   "description": "Discord bot by Owen Shevlin",
-  "main": "main.js",
-  "bin": {
-    "shevbot": "ShevBot.js"
-  },
+  "main": "core/main.js",
   "dependencies": {
     "discord.js": "^12.5.1"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "run": "npm core/main.js"
   },
   "repository": {
     "type": "git",

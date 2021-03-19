@@ -4,7 +4,8 @@
   "description": "Discord bot by Owen Shevlin",
   "main": "core/main.js",
   "dependencies": {
-    "discord.js": "^12.5.1"
+    "discord.js": "^12.5.1",
+    "emojis-list": "^3.0.0"
   },
   "scripts": {
     "run": "npm core/main.js"

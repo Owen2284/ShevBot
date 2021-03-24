@@ -1,10 +1,9 @@
 node_modules/
 bin/
 .vscode/
-ava/
-err/
-log/
-mus/
-sou/
-dat/bot.json
+
 config.json
+.env
+
+errors/
+logs/

@@ -111,7 +111,7 @@ function log(type, text, toConsole = true, toFile = true) {
 // Writes a given error to an error text file.
 function error(error) {
     // Log to console
-    console.error("Error", "Reaction failed: " + error.message);
+    console.error("Error", error.message);
 
     // Log to file
     if (process.env.FILE_SYSTEM_LOGGING_ENABLED) {

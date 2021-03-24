@@ -30,8 +30,8 @@ client.on("message", message => {
         
         // Reactions
         try {
-            const reactChance = 0.10;
-            const multiReactChance = 0.50;
+            const reactChance = 0.05;
+            const multiReactChance = 0.40;
             const guildReactChance = 0.20; 
             let reactCount = 0;
 

@@ -1,10 +1,9 @@
+require('dotenv').config();
+
 const fs = require("fs");
 
 const Discord = require("discord.js");
 const EmojiList = require("emojis-list");
-
-// Read config file
-const config = JSON.parse(readFile("config.json"));
 
 // Creating bot.
 const client = new Discord.Client();
@@ -16,13 +15,13 @@ client.on("message", message => {
 	const raw = message.content;
 	const input = raw.toUpperCase();
 
-	const isCommand = input.substring(0, 1) === config["commandCharacter"];	
+	const isCommand = input.substring(0, 1) === process.env.BOT_COMMAND_CHARACTER;	
 	const isBot = sender.bot;
 
     if (isCommand && !isBot) {
         // Process command
         const command = commandSplit(raw); 
-        command[0] = command[0].replace(config["commandCharacter"], "");
+        command[0] = command[0].replace(process.env.BOT_COMMAND_CHARACTER, "");
         Operations.evaluateCommand(message, sender, channel, command, bot, commands, data, details, settings);
     }
     else if (!isCommand) {
@@ -31,8 +30,8 @@ client.on("message", message => {
         
         // Reactions
         try {
-            const reactChance = 1;
-            const multiReactChance = 0.50;
+            const reactChance = 0.05;
+            const multiReactChance = 0.40;
             const guildReactChance = 0.20; 
             let reactCount = 0;
 
@@ -103,19 +102,24 @@ function log(type, text, toConsole = true, toFile = true) {
     }
 
     // Log to file
-	if (toFile) {
-        const fileName = config["directories"]["logs"] + "/" + getDateString("-", true) + ".txt";
-        writeFile(fileName, message + "\n", fs.existsSync(fileName));
+	if (process.env.FILE_SYSTEM_LOGGING_ENABLED === "1" && toFile) {
+        const fileName = process.env.FILE_SYSTEM_LOGGING_LOG_DIR + "/" + getDateString("-", true) + ".txt";
+        writeFile(fileName, message + "\n", true);
     }
 }
 
 // Writes a given error to an error text file.
 function error(error) {
-	const filename = config["directories"]["errors"] + "/" + getDateString("-", true) + "-" + getTimeString("-") + ".txt";
-	const content = error.stack;
-	writeFile(filename, content, false);
-    log("Error", "Reaction failed: " + error.message);
-	log("Error", "Stack trace saved to \"" + filename + "\".");
+    // Log to console
+    console.error("Error", error.message);
+
+    // Log to file
+    if (process.env.FILE_SYSTEM_LOGGING_ENABLED) {
+        const filename = process.env.FILE_SYSTEM_LOGGING_ERROR_DIR + "/" + getDateString("-", true) + "-" + getTimeString("-") + ".txt";
+        const content = error.stack;
+        writeFile(filename, content, false);
+        log("Error", "Stack trace saved to \"" + filename + "\".");
+    }
 }
 
 // Gets the time for the TIME command.
@@ -180,16 +184,16 @@ function writeFile(path, content, append = false) {
     }
 
     if (append) {
-        fs.writeFileSync(path, content);
+        fs.appendFileSync(path, content);
     }
     else {
-        fs.appendFileSync(path, content);
+        fs.writeFileSync(path, content);
     }
 }
 
 // Activate the bot.
 try {
-	client.login(config["token"]);
+	client.login(process.env.BOT_TOKEN);
 } catch (e) {
 	error(e);
 	client.destroy();

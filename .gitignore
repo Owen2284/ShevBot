@@ -1,7 +1,9 @@
 node_modules/
 bin/
 .vscode/
+
 config.json
+.env
 
 errors/
 logs/

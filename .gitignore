@@ -3,6 +3,7 @@ bin/
 .vscode/
 
 config.json
+.env
 
 errors/
 logs/

@@ -1,14 +1,16 @@
 require('dotenv').config();
 
+const fs = require("fs");
+
 const appInsights = require('applicationinsights');
-const telemetryClient = null;
+let telemetryClient = null;
 if (process.env.APPINSIGHTS_INSTRUMENTATIONKEY) {
     appInsights.setup()
     appInsights.start();
     telemetryClient = appInsights.defaultClient;
-}
 
-const fs = require("fs");
+    log("Boot", "Telemetry client initialised.");
+}
 
 const Discord = require("discord.js");
 const EmojiList = require("emojis-list");
@@ -38,7 +40,7 @@ client.on("message", message => {
         
         // Reactions
         try {
-            const reactChance = 0.05;
+            const reactChance = 1.05;
             const multiReactChance = 0.40;
             const guildReactChance = 0.20; 
             let reactCount = 0;
@@ -116,14 +118,15 @@ function log(type, text, toConsole = true, toFile = true, toTelemetry = true) {
     }
 
     // Log to telemetry
-    if (telemetryClient && toTelemetry) {
-        // telemetryClient.trackEvent({
-        //     name: "Custom: " + type,
-
-        // })
-        telemetryClient.trackTrace({
-            message 
-        });
+    try {
+        if (telemetryClient && toTelemetry) {
+            telemetryClient.trackTrace({
+                message 
+            });
+        }
+    }
+    catch (e) {
+        console.log(e);
     }
 }
 
@@ -220,6 +223,8 @@ function writeFile(path, content, append = false) {
 // Activate the bot.
 try {
 	client.login(process.env.BOT_TOKEN);
+    log("Boot", "Bot logged in.");
+
 } catch (e) {
 	error(e);
 	client.destroy();

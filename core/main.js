@@ -1,5 +1,13 @@
 require('dotenv').config();
 
+const appInsights = require('applicationinsights');
+const telemetryClient = null;
+if (process.env.APPINSIGHTS_INSTRUMENTATIONKEY) {
+    appInsights.setup()
+    appInsights.start();
+    telemetryClient = appInsights.defaultClient;
+}
+
 const fs = require("fs");
 
 const Discord = require("discord.js");
@@ -72,7 +80,7 @@ client.on("message", message => {
 });
 
 // General command for console logging.
-function log(type, text, toConsole = true, toFile = true) {
+function log(type, text, toConsole = true, toFile = true, toTelemetry = true) {
 	// Constant determining how long the type should be.
 	const BUFFER_LENGTH = 7;
 
@@ -90,7 +98,7 @@ function log(type, text, toConsole = true, toFile = true) {
 	}
 	// Shortening type if too long.
 	else if (type.length > BUFFER_LENGTH) {
-		message += cType.substring(0, 7);
+		message += type.substring(0, 7);
 	} 
 
 	// Close off string and log the message.
@@ -106,6 +114,17 @@ function log(type, text, toConsole = true, toFile = true) {
         const fileName = process.env.FILE_SYSTEM_LOGGING_LOG_DIR + "/" + getDateString("-", true) + ".txt";
         writeFile(fileName, message + "\n", true);
     }
+
+    // Log to telemetry
+    if (telemetryClient && toTelemetry) {
+        // telemetryClient.trackEvent({
+        //     name: "Custom: " + type,
+
+        // })
+        telemetryClient.trackTrace({
+            message 
+        });
+    }
 }
 
 // Writes a given error to an error text file.
@@ -119,6 +138,13 @@ function error(error) {
         const content = error.stack;
         writeFile(filename, content, false);
         log("Error", "Stack trace saved to \"" + filename + "\".");
+    }
+
+    // Log to telemtry provider
+    if (telemetryClient) {
+        telemetryClient.trackException({
+            exception: error
+        })
     }
 }
 

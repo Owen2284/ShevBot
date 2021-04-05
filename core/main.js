@@ -1,5 +1,27 @@
 require('dotenv').config();
 
+// Creating config object
+const config = Object.freeze({
+    bot: {
+        commandCharacter: process.env.BOT_COMMAND_CHARACTER
+    },
+    logging: {
+        fileSystemLoggingEnabled: process.env.FILE_SYSTEM_LOGGING_ENABLED === "1",
+        fileSystemLoggingDirectories: {
+            errors: process.env.FILE_SYSTEM_LOGGING_ERROR_DIR,
+            logs: process.env.FILE_SYSTEM_LOGGING_LOG_DIR,
+        }
+    },
+    webserver: {
+        port: parseInt(process.env.WEB_SERVER_PORT)
+    },
+    reactions: {
+        initialReactChance: parseFloat(process.env.REACTION_INITIAL_CHANCE),
+        multiReactChance: parseFloat(process.env.REACTION_MULTI_CHANCE),
+        guildEmojiChance: parseFloat(process.env.REACTION_GUILD_EMOJI_CHANCE)
+    }
+});
+
 const fs = require("fs");
 
 const appInsights = require('applicationinsights');
@@ -13,6 +35,7 @@ if (process.env.APPINSIGHTS_INSTRUMENTATIONKEY) {
 }
 
 const Discord = require("discord.js");
+const express = require('express');
 const EmojiList = require("emojis-list");
 
 // Creating bot.
@@ -25,13 +48,13 @@ client.on("message", message => {
 	const raw = message.content;
 	const input = raw.toUpperCase();
 
-	const isCommand = input.substring(0, 1) === process.env.BOT_COMMAND_CHARACTER;	
+	const isCommand = input.substring(0, 1) === config.bot.commandCharacter;	
 	const isBot = sender.bot;
 
     if (isCommand && !isBot) {
         // Process command
         const command = commandSplit(raw); 
-        command[0] = command[0].replace(process.env.BOT_COMMAND_CHARACTER, "");
+        command[0] = command[0].replace(config.bot.commandCharacter, "");
         Operations.evaluateCommand(message, sender, channel, command, bot, commands, data, details, settings);
     }
     else if (!isCommand) {
@@ -40,13 +63,13 @@ client.on("message", message => {
         
         // Reactions
         try {
-            const reactChance = 1.05;
-            const multiReactChance = 0.40;
-            const guildReactChance = 0.20; 
+            const initialReactChance = config.reactions.initialReactChance;
+            const multiReactChance = config.reactions.guildEmojiChance;
+            const guildReactChance = config.reactions.multiReactChance; 
             let reactCount = 0;
 
             // Run the first random chance for whether there will be any reactions or not
-            if (Math.random() < reactChance) {
+            if (Math.random() < initialReactChance) {
                 const standardEmoji = EmojiList;
                 const guildEmoji = client.emojis.cache.array().filter(i => !i.animated);
 
@@ -112,8 +135,8 @@ function log(type, text, toConsole = true, toFile = true, toTelemetry = true) {
     }
 
     // Log to file
-	if (process.env.FILE_SYSTEM_LOGGING_ENABLED === "1" && toFile) {
-        const fileName = process.env.FILE_SYSTEM_LOGGING_LOG_DIR + "/" + getDateString("-", true) + ".txt";
+	if (config.logging.fileSystemLoggingEnabled && toFile) {
+        const fileName = config.logging.fileSystemLoggingDirectories.logs + "/" + getDateString("-", true) + ".txt";
         writeFile(fileName, message + "\n", true);
     }
 
@@ -136,8 +159,8 @@ function error(error) {
     console.error("Error", error.message);
 
     // Log to file
-    if (process.env.FILE_SYSTEM_LOGGING_ENABLED) {
-        const filename = process.env.FILE_SYSTEM_LOGGING_ERROR_DIR + "/" + getDateString("-", true) + "-" + getTimeString("-") + ".txt";
+    if (config.logging.fileSystemLoggingEnabled) {
+        const filename = config.logging.fileSystemLoggingDirectories.errors + "/" + getDateString("-", true) + "-" + getTimeString("-") + ".txt";
         const content = error.stack;
         writeFile(filename, content, false);
         log("Error", "Stack trace saved to \"" + filename + "\".");
@@ -227,6 +250,23 @@ try {
 
 } catch (e) {
 	error(e);
+	client.destroy();
+	process.exit(1);
+}
+
+// Spin up a web server to keep live checks happy for now.
+try {
+    const app = express();
+
+    app.get('/', (req, res) => {
+        res.send(readFile("site/index.html"));
+    });
+    app.listen(config.webserver.port);
+
+    log("Boot", "Web server spun up.");
+}
+catch (e) {
+    error(e);
 	client.destroy();
 	process.exit(1);
 }

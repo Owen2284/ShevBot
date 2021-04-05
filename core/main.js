@@ -12,6 +12,9 @@ const config = Object.freeze({
             logs: process.env.FILE_SYSTEM_LOGGING_LOG_DIR,
         }
     },
+    webserver: {
+        port: parseInt(process.env.WEB_SERVER_PORT)
+    },
     reactions: {
         initialReactChance: parseFloat(process.env.REACTION_INITIAL_CHANCE),
         multiReactChance: parseFloat(process.env.REACTION_MULTI_CHANCE),
@@ -32,6 +35,7 @@ if (process.env.APPINSIGHTS_INSTRUMENTATIONKEY) {
 }
 
 const Discord = require("discord.js");
+const express = require('express');
 const EmojiList = require("emojis-list");
 
 // Creating bot.
@@ -250,12 +254,19 @@ try {
 	process.exit(1);
 }
 
-// // Spin up a web server to keep live checks happy for now.
-// try {
-//     log("Boot", "Web server spun up.");
-// }
-// catch (e) {
-//     error(e);
-// 	client.destroy();
-// 	process.exit(1);
-// }
+// Spin up a web server to keep live checks happy for now.
+try {
+    const app = express();
+
+    app.get('/', (req, res) => {
+        res.send(readFile("site/index.html"));
+    });
+    app.listen(config.webserver.port);
+
+    log("Boot", "Web server spun up.");
+}
+catch (e) {
+    error(e);
+	client.destroy();
+	process.exit(1);
+}

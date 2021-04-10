@@ -19,6 +19,9 @@ const config = Object.freeze({
         initialReactChance: parseFloat(process.env.REACTION_INITIAL_CHANCE),
         multiReactChance: parseFloat(process.env.REACTION_MULTI_CHANCE),
         guildEmojiChance: parseFloat(process.env.REACTION_GUILD_EMOJI_CHANCE)
+    },
+    shitpost: {
+        initialShitpostChance: parseFloat(process.env.SHITPOST_INITIAL_CHANCE)
     }
 });
 
@@ -50,6 +53,7 @@ client.on("message", message => {
 
 	const isCommand = input.substring(0, 1) === config.bot.commandCharacter;	
 	const isBot = sender.bot;
+	const isSelf = sender.id === client.user.id;
 
     if (isCommand && !isBot) {
         // Process command
@@ -101,13 +105,141 @@ client.on("message", message => {
         } catch (e) {
             error(e);
         }
+
+        if (!isSelf) {
+            // Shitpost
+            try {
+                const initialShitpostChance = config.shitpost.initialShitpostChance;
+
+                // Run the random check to see if there will be a shitpost
+                if (Math.random() < initialShitpostChance) {
+                    // Fetch the most recent 100 messages from the channel
+                    channel.messages.fetch({ limit: 100 })
+                        .then((previousMessages) => {
+                            // Build a dictionary of all of the words in the previous 100 messages
+                            const wordDictionary = {};
+                            let totalWords = 0;
+                            for (let [_, previousMessage] of previousMessages) {
+                                // Ignore message if it has no content
+                                if (!previousMessage.content) {
+                                    continue;
+                                }
+
+                                // Ignore message if it was written by the bot
+                                if (previousMessage.author.id === client.id) {
+                                    continue;
+                                }
+
+                                // Remove some punctuation from the sentence, then split on spaces
+                                const previousContentWords = previousMessage.content
+                                    .replace(/\./g, "").replace(/\,/g, "").replace(/\;/g, "").replace(/\:/g, "")
+                                    .replace(/\!/g, "").replace(/\?/g, "").split(" ");
+
+                                for (let word of previousContentWords) {
+                                    // If the word is empty, ignore it
+                                    if (!word) {
+                                        continue;
+                                    }
+
+                                    // Ignore if word is a link, ignore it
+                                    if (word.includes("/") || word.includes("://")) {
+                                        continue;
+                                    }
+
+                                    // Trim the word
+                                    word = word.trim();
+
+                                    // Update the dictionary with the new instance of the word
+                                    if (wordDictionary[word] > 0) {
+                                        wordDictionary[word] = wordDictionary[word] + 1;
+                                    }
+                                    else {
+                                        wordDictionary[word] = 1;
+                                    }
+
+                                    totalWords++;
+                                }
+                            }
+
+                            // Flatten dictionary into a list
+                            const wordList = [];
+                            for (let wordKey in wordDictionary) {
+                                wordList.push([wordKey, wordDictionary[wordKey]]);
+                            }
+
+                            // Begin constructing the sentence
+                            let sentence = "";
+                            let wordsAdded = 0;
+
+                            // Determine a random length for the sentence, then loop until that length has been met
+                            const sentenceLength = (Math.random() * 20) + 1;
+                            while (wordsAdded < sentenceLength) {
+                                // Generate a random number corresponding to the word to add
+                                const wordNumber = (Math.random() * totalWords) + 1;
+
+                                let currentWordNumberSum = 0;
+                                for (let [potentialWord, potentialWordCount] of wordList) {
+                                    // Add the number of occurrences of the word in the data to the running count;
+                                    currentWordNumberSum += potentialWordCount;
+
+                                    // If the running count exceeds the random value, then add the current word to the sentence
+                                    if (currentWordNumberSum > wordNumber) {
+                                        // Add the word itself to the sentence
+                                        sentence += potentialWord;
+
+                                        // Add a space after the word, with a chance to add an occasional comma
+                                        if (Math.random() < 0.08) {
+                                            sentence += ", ";
+                                        }
+                                        else {
+                                            sentence += " ";
+                                        }
+
+                                        // Break out of the loop
+                                        break;
+                                    }
+                                }
+
+                                wordsAdded++;
+                            }
+
+                            // Uppercase the start of the sentence, and trim the trailing spaces or comma
+                            sentence = sentence.substring(0, 1).toUpperCase() + sentence.substring(1);
+                            while (sentence.endsWith(",") || sentence.endsWith(" ")) {
+                                sentence = sentence.substring(0, sentence.length - 1);
+                            }
+
+                            // Pick a random end character
+                            const endRandomValue = Math.random();
+                            if (endRandomValue <= 0.5) {
+                                sentence += ".";
+                            }
+                            else if (endRandomValue <= 0.75) {
+                                sentence += "?";
+                            }
+                            else {
+                                sentence += "!";
+                            }
+
+                            // Send the message
+                            channel.send(sentence);
+                            
+                            // Log action
+                            log("Shitpost", "Posted a message");
+                        });
+                }
+            }
+            catch (e) {
+                error(e);
+            }
+        }
     }
 });
 
 // General command for console logging.
 function log(type, text, toConsole = true, toFile = true, toTelemetry = true) {
 	// Constant determining how long the type should be.
-	const BUFFER_LENGTH = 7;
+	const BUFFER_LENGTH = 8;
 
 	// Creating initial string.
 	let message = "[" + getTimeString() + "] [";
@@ -247,7 +379,6 @@ function writeFile(path, content, append = false) {
 try {
 	client.login(process.env.BOT_TOKEN);
     log("Boot", "Bot logged in.");
-
 } catch (e) {
 	error(e);
 	client.destroy();

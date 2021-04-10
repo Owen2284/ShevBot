@@ -132,7 +132,7 @@ client.on("message", message => {
 
                                 // Remove some punctuation from the sentence, then split on spaces
                                 const previousContentWords = previousMessage.content
-                                    .replace(/\./g, "").replace(/\,/g, "").replace(/\;/g, "").replace(/\:/g, "")
+                                    .replace(/\./g, "").replace(/\,/g, "").replace(/\;/g, "")
                                     .replace(/\!/g, "").replace(/\?/g, "").split(" ");
 
                                 for (let word of previousContentWords) {

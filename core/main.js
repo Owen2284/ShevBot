@@ -21,7 +21,8 @@ const config = Object.freeze({
         guildEmojiChance: parseFloat(process.env.REACTION_GUILD_EMOJI_CHANCE)
     },
     shitpost: {
-        initialShitpostChance: parseFloat(process.env.SHITPOST_INITIAL_CHANCE)
+        initialShitpostChance: parseFloat(process.env.SHITPOST_INITIAL_CHANCE),
+        maxSentenceLength: parseInt(process.env.SHITPOST_MAX_SENTENCE_LENGTH)
     }
 });
 
@@ -172,7 +173,7 @@ client.on("message", message => {
                             let wordsAdded = 0;
 
                             // Determine a random length for the sentence, then loop until that length has been met
-                            const sentenceLength = (Math.random() * 20) + 1;
+                            const sentenceLength = (Math.random() * config.shitpost.maxSentenceLength) + 1;
                             while (wordsAdded < sentenceLength) {
                                 // Generate a random number corresponding to the word to add
                                 const wordNumber = (Math.random() * totalWords) + 1;

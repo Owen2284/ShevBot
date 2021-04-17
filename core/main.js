@@ -22,7 +22,9 @@ const config = Object.freeze({
     },
     shitpost: {
         initialShitpostChance: parseFloat(process.env.SHITPOST_INITIAL_CHANCE),
-        maxSentenceLength: parseInt(process.env.SHITPOST_MAX_SENTENCE_LENGTH)
+        atypicalFollowUpChance: parseFloat(process.env.SHITPOST_ATYPICAL_FOLLOWUP_CHANCE),
+        maxSentenceLength: parseInt(process.env.SHITPOST_MAX_SENTENCE_LENGTH),
+        maxSentenceCount: parseInt(process.env.SHITPOST_MAX_SENTENCE_COUNT)
     }
 });
 
@@ -42,6 +44,11 @@ const Discord = require("discord.js");
 const express = require('express');
 const EmojiList = require("emojis-list");
 
+// Shitpost data storage
+const wordDictionary = {};
+let channelsLastProcessedTimes = {};
+let totalWords = 0;
+
 // Creating bot.
 const client = new Discord.Client();
 
@@ -60,7 +67,9 @@ client.on("message", message => {
         // Process command
         const command = commandSplit(raw); 
         command[0] = command[0].replace(config.bot.commandCharacter, "");
-        Operations.evaluateCommand(message, sender, channel, command, bot, commands, data, details, settings);
+
+        // TODO
+        //Operations.evaluateCommand(message, sender, channel, command, bot, commands, data, details, settings);
     }
     else if (!isCommand) {
         // Operations.evaluateKeysponses(message, sender, channel, raw, data, details);
@@ -114,20 +123,25 @@ client.on("message", message => {
 
                 // Run the random check to see if there will be a shitpost
                 if (Math.random() < initialShitpostChance) {
+                    const channelLastProcessedTime = channelsLastProcessedTimes[channel.id] || 0;
+
                     // Fetch the most recent 100 messages from the channel
                     channel.messages.fetch({ limit: 100 })
                         .then((previousMessages) => {
                             // Build a dictionary of all of the words in the previous 100 messages
-                            const wordDictionary = {};
-                            let totalWords = 0;
                             for (let [_, previousMessage] of previousMessages) {
+                                // Break out of loop if timestamp of message is before the last processed time for the channel
+                                if (previousMessage.createdTimestamp <= channelLastProcessedTime) {
+                                    break;
+                                }
+
                                 // Ignore message if it has no content
                                 if (!previousMessage.content) {
                                     continue;
                                 }
 
-                                // Ignore message if it was written by the bot
-                                if (previousMessage.author.id === client.id) {
+                                // Ignore message if it was written by the us
+                                if (previousMessage.author.id === client.user.id) {
                                     continue;
                                 }
 
@@ -162,68 +176,90 @@ client.on("message", message => {
                                 }
                             }
 
+                            // Update channel last processed time
+                            let firstMessage = null;
+                            for (let [_, previousMessage] of previousMessages) {
+                                firstMessage = previousMessage;
+                                break;
+                            }
+                            if (firstMessage) {
+                                channelsLastProcessedTimes[channel.id] = firstMessage.createdTimestamp || 0;
+                            }
+
                             // Flatten dictionary into a list
                             const wordList = [];
                             for (let wordKey in wordDictionary) {
                                 wordList.push([wordKey, wordDictionary[wordKey]]);
                             }
 
-                            // Begin constructing the sentence
-                            let sentence = "";
-                            let wordsAdded = 0;
+                            // Determine the number of sentences to write
+                            const sentenceCount = (Math.random() * config.shitpost.maxSentenceCount) + 1;
+                            const sentenceList = [];
 
-                            // Determine a random length for the sentence, then loop until that length has been met
-                            const sentenceLength = (Math.random() * config.shitpost.maxSentenceLength) + 1;
-                            while (wordsAdded < sentenceLength) {
-                                // Generate a random number corresponding to the word to add
-                                const wordNumber = (Math.random() * totalWords) + 1;
+                            for (let sentenceNumber = 1; sentenceNumber <= sentenceCount; sentenceNumber++) {
+                                // Begin constructing the sentence
+                                let sentence = "";
+                                let wordsAdded = 0;
 
-                                let currentWordNumberSum = 0;
-                                for (let [potentialWord, potentialWordCount] of wordList) {
-                                    // Add the number of occurrences of the word in the data to the running count;
-                                    currentWordNumberSum += potentialWordCount;
+                                // Determine a random length for the sentence, then loop until that length has been met
+                                const sentenceLength = (Math.random() * config.shitpost.maxSentenceLength) + 1;
+                                while (wordsAdded < sentenceLength) {
+                                    // Generate a random number corresponding to the word to add
+                                    const wordNumber = (Math.random() * totalWords) + 1;
 
-                                    // If the running count exceeds the random value, then add the current word to the sentence
-                                    if (currentWordNumberSum > wordNumber) {
-                                        // Add the word itself to the sentence
-                                        sentence += potentialWord;
+                                    let currentWordNumberSum = 0;
+                                    for (let [potentialWord, potentialWordCount] of wordList) {
+                                        // Add the number of occurrences of the word in the data to the running count;
+                                        currentWordNumberSum += potentialWordCount;
 
-                                        // Add a space after the word, with a chance to add an occasional comma
-                                        if (Math.random() < 0.08) {
-                                            sentence += ", ";
+                                        // If the running count exceeds the random value, then add the current word to the sentence
+                                        if (currentWordNumberSum > wordNumber) {
+                                            // Add the word itself to the sentence
+                                            sentence += potentialWord;
+
+                                            // Add a space after the word, with a chance to add an occasional comma
+                                            if (Math.random() < 0.08) {
+                                                sentence += ", ";
+                                            }
+                                            else {
+                                                sentence += " ";
+                                            }
+
+                                            // Break out of the loop
+                                            break;
                                         }
-                                        else {
-                                            sentence += " ";
-                                        }
-
-                                        // Break out of the loop
-                                        break;
                                     }
+
+                                    wordsAdded++;
                                 }
 
-                                wordsAdded++;
+                                // Uppercase the start of the sentence, and trim the trailing spaces or comma
+                                sentence = sentence.substring(0, 1).toUpperCase() + sentence.substring(1);
+                                while (sentence.endsWith(",") || sentence.endsWith(" ")) {
+                                    sentence = sentence.substring(0, sentence.length - 1);
+                                }
+
+                                // Pick a random end character
+                                const endRandomValue = Math.random();
+                                if (endRandomValue <= 0.5) {
+                                    sentence += ".";
+                                }
+                                else if (endRandomValue <= 0.75) {
+                                    sentence += "?";
+                                }
+                                else {
+                                    sentence += "!";
+                                }
+
+                                // Add the sentence to the list
+                                sentenceList.push(sentence);
                             }
 
-                            // Uppercase the start of the sentence, and trim the trailing spaces or comma
-                            sentence = sentence.substring(0, 1).toUpperCase() + sentence.substring(1);
-                            while (sentence.endsWith(",") || sentence.endsWith(" ")) {
-                                sentence = sentence.substring(0, sentence.length - 1);
-                            }
-
-                            // Pick a random end character
-                            const endRandomValue = Math.random();
-                            if (endRandomValue <= 0.5) {
-                                sentence += ".";
-                            }
-                            else if (endRandomValue <= 0.75) {
-                                sentence += "?";
-                            }
-                            else {
-                                sentence += "!";
-                            }
+                            // Construct the message from the sentence list
+                            const joinedSentences = sentenceList.join(" ");
 
                             // Send the message
-                            channel.send(sentence);
+                            channel.send(joinedSentences);
                             
                             // Log action
                             log("Shitpost", "Posted a message");

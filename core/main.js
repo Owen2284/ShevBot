@@ -3,7 +3,8 @@ require('dotenv').config();
 // Creating config object
 const config = Object.freeze({
     bot: {
-        commandCharacter: process.env.BOT_COMMAND_CHARACTER
+        commandCharacter: process.env.BOT_COMMAND_CHARACTER,
+        githubRepo: process.env.BOT_GITHUB_REPO
     },
     logging: {
         fileSystemLoggingEnabled: process.env.FILE_SYSTEM_LOGGING_ENABLED === "1",
@@ -29,6 +30,7 @@ const config = Object.freeze({
 });
 
 const fs = require("fs");
+const path = require("path");
 
 const appInsights = require('applicationinsights');
 let telemetryClient = null;
@@ -49,32 +51,55 @@ const wordDictionary = {};
 let channelsLastProcessedTimes = {};
 let totalWords = 0;
 
-// Creating bot.
+// Load in bot commands
+const commands = loadCommands();
+
+// Creating bot client.
 const client = new Discord.Client();
+
+// Mount additional details onto client
+client.config = config;
+client.commands = commands;
 
 // Set up bot event handlers
 client.on("message", message => {
     const sender = message.author;
 	const channel = message.channel;
-	const raw = message.content;
-	const input = raw.toUpperCase();
+	const content = message.content;
 
-	const isCommand = input.substring(0, 1) === config.bot.commandCharacter;	
+	const isCommand = content.substring(0, 1) === config.bot.commandCharacter;	
 	const isBot = sender.bot;
 	const isSelf = sender.id === client.user.id;
 
     if (isCommand && !isBot) {
-        // Process command
-        const command = commandSplit(raw); 
-        command[0] = command[0].replace(config.bot.commandCharacter, "");
+        // Command
+        try {
+            // Split command
+            const commandParts = content.split(" "); 
+            commandParts[0] = commandParts[0].replace(config.bot.commandCharacter, "");
 
-        // TODO
-        //Operations.evaluateCommand(message, sender, channel, command, bot, commands, data, details, settings);
+            // Try to find the command
+            let commandRun = false;
+            for (let command of commands) {
+                if (command.name.toUpperCase() === commandParts[0].toUpperCase()) {
+                    // TODO: Check if command is usable in channel
+
+                    let args = commandParts.slice(1);
+                    command.process(args, client, message);
+                    commandRun = true;
+                }
+            }
+
+            // Let user know if command couldn't be found
+            if (!commandRun) {
+                channel.send(`Sorry, I couldn't find the ${config.bot.commandCharacter}${commandParts[0].toUpperCase()} command.`);
+            }
+        }
+        catch (e) {
+            error(e);
+        }
     }
     else if (!isCommand) {
-        // Operations.evaluateKeysponses(message, sender, channel, raw, data, details);
-        // Operations.evaluateSwears(message, sender, channel, raw, data, details);
-        
         // Reactions
         try {
             const initialReactChance = config.reactions.initialReactChance;
@@ -410,6 +435,42 @@ function writeFile(path, content, append = false) {
     else {
         fs.writeFileSync(path, content);
     }
+}
+
+function loadCommands() {
+    const commands = [];
+
+    // Read all of the folders (categories) in the commands folder
+    const categoryFolders = fs.readdirSync("./commands/");
+    for (let categoryFolderName of categoryFolders) {
+        // Read the commands in each category folder
+        const commandFiles = fs.readdirSync(`./commands/${categoryFolderName}`);
+        for (let commandFile of commandFiles) {
+            let command = null
+            try {
+                // Require the command from the file
+                command = require(path.resolve(__dirname, `./../commands/${categoryFolderName}/${commandFile}`));
+            }
+            catch (e) {
+                error(e);
+                continue;
+            }
+
+            // If command's true flag is not explicitly active, then skip it
+            if (command.active !== true) continue;
+
+            // Set the category field of the command
+            command.category = categoryFolderName;
+
+            // Add the command to the list
+            commands.push(command);
+        }
+    }
+
+    // Order by category and order fields
+    // TODO
+
+    return commands;
 }
 
 // Activate the bot.

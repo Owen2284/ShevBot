@@ -7,7 +7,10 @@ module.exports = {
 	active: true,
 	channelTypes: ["dm"],
 	permissions: [],
-	process: function(args, client, message) {
-		say("reply", manifest.message.message, "your ID is \"" + manifest.author.author.id + "\".");
+	process: async function(args, client, message) {
+		if (!message.author.dmChannel) {
+			dmchannel = await message.author.createDM();
+		}
+		message.author.dmChannel.send("Your ID is \"" + message.author.id + "\".");
 	}
 }

@@ -4,7 +4,8 @@ require('dotenv').config();
 const config = Object.freeze({
     bot: {
         commandCharacter: process.env.BOT_COMMAND_CHARACTER,
-        githubRepo: process.env.BOT_GITHUB_REPO
+        githubRepo: process.env.BOT_GITHUB_REPO,
+        websiteUrl: process.env.BOT_WEBSITE_URL
     },
     logging: {
         fileSystemLoggingEnabled: process.env.FILE_SYSTEM_LOGGING_ENABLED === "1",
@@ -45,6 +46,7 @@ if (process.env.APPINSIGHTS_INSTRUMENTATIONKEY) {
 const Discord = require("discord.js");
 const express = require('express');
 const EmojiList = require("emojis-list");
+const Handlebars = require("handlebars");
 
 // Shitpost data storage
 const wordDictionary = {};
@@ -488,8 +490,47 @@ try {
     const app = express();
 
     app.get('/', (req, res) => {
-        res.send(readFile("site/index.html"));
+        // Read handlebars file and convert into template
+        const source = readFile(path.resolve(__dirname, "./../site/pages/index.hbs"));
+        const template = Handlebars.compile(source);
+
+        // Determine online time
+        const onlineMilliseconds = client.uptime;
+
+        const onlineDays = Math.trunc(onlineMilliseconds / 86400000);
+        const onlineHours = Math.trunc(onlineMilliseconds / 3600000) % 24;
+        const onlineMinutes = Math.trunc(onlineMilliseconds / 60000) % 60;
+        const onlineSeconds = Math.trunc(onlineMilliseconds / 1000) % 60;
+
+        let onlineTime = "";
+        if (onlineDays > 0) {
+            onlineTime += `${onlineDays} day(s), `;
+        }
+        if (onlineHours > 0) {
+            onlineTime += `${onlineHours} hour(s), `;
+        }
+        if (onlineMinutes > 0) {
+            onlineTime += `${onlineMinutes} minute(s), `;
+        }
+        if (onlineSeconds > 0) {
+            onlineTime += `${onlineSeconds} second(s)`;
+        }
+        
+        if (!onlineTime) {
+            onlineTime = "0 seconds";
+        }
+        else if (onlineTime.endsWith(", ")) {
+            onlineTime = onlineTime.substring(0, onlineTime.length - 2);
+        }
+
+        // Generate the page from the template and repsond
+        res.send(template({
+            githubRepo: config.bot.githubRepo,
+            onlineTime,
+            serverCount: client.guilds.cache.size || 0
+        }));
     });
+    app.use(express.static(path.resolve(__dirname, "./../site/static")));
     app.listen(config.webserver.port);
 
     log("Boot", "Web server spun up.");

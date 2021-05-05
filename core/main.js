@@ -55,8 +55,6 @@ const wordDictionary = {
     totalWordsProcessed: 0,
     channels: {}
 };
-let channelsLastProcessedTimes = {};
-let totalWords = 0;
 
 // Load in bot commands
 const commands = loadCommands();
@@ -193,6 +191,8 @@ client.on("message", message => {
     }
 });
 
+// TODO: Dictionary saving and loading
+
 function updateDictionary(channelId, messageBatch) {
     if (!wordDictionary.channels[channelId]) {
         wordDictionary.channels[channelId] = {
@@ -226,15 +226,15 @@ function updateDictionary(channelId, messageBatch) {
 
             // Remove select characters from the word (unless it's an emoji)
             let sentenceEnder = false;
-            if (!word.startsWith(":") || !word.endsWith(":")) {
-                word = word.replace(/[^a-zA-Z0-9_\-.?!]/g, "").trim();
+            if (!word.startsWith("<:") || !word.endsWith(">")) {
+                word = word.replace(/[^a-zA-Z0-9_\-\'.?!]/g, " ").trim();
 
                 // Determine if this word is the end of a sentence
                 if (word.endsWith(".") || word.endsWith("!") || word.endsWith("?")) {
                     sentenceEnder = true;
                 }
 
-                word = word.replace(/[.?!]/g, "").trim();
+                word = word.replace(/[.?!]/g, " ").trim();
             }
 
             // If the word is empty/null/undefined, ignore it
@@ -288,20 +288,23 @@ function updateDictionary(channelId, messageBatch) {
             appearanceEntry.count += 1;
 
             // Add the next word to the followup list if not present
-            let followupEntry = dictionaryEntry.followups[nextWord.toLowerCase()];
-            if (!!nextWord && !followupEntry) {
-                dictionaryEntry.followups[nextWord.toLowerCase()] = {
-                    count: 0
-                };
-                followupEntry = dictionaryEntry.followups[nextWord.toLowerCase()];
-            }
-            else if (!nextWord) {
+            let followupEntry = null;
+            if (!nextWord) {
                 followupEntry = dictionaryEntry.followups["#:#null#:#"];
                 if (!followupEntry) {
                     dictionaryEntry.followups["#:#null#:#"] = {
                         count: 0
                     };
                     followupEntry = dictionaryEntry.followups["#:#null#:#"];
+                }
+            }
+            else {
+                followupEntry = dictionaryEntry.followups[nextWord.toLowerCase()];
+                if (!!nextWord && !followupEntry) {
+                    dictionaryEntry.followups[nextWord.toLowerCase()] = {
+                        count: 0
+                    };
+                    followupEntry = dictionaryEntry.followups[nextWord.toLowerCase()];
                 }
             }
 
@@ -383,16 +386,16 @@ function generateSentence(weightedDictionary) {
         let currentWord = null;
 
         // If this is the first word of the sentence, then select a random word 
-        if (!previousWordKey || ignoreFollowups) {
+        if (!previousWord || ignoreFollowups) {
             // Generate random float, and use that to determine the word
             const wordRoll = Math.random();
 
             let runningTotal = 0;
-            for (let i = 0; i < weightedDictionary.entries; ++i) {
-                currentWord = weightedDictionary.entries[i];
+            for (let i = 0; i < weightedDictionary.length; ++i) {
+                currentWord = weightedDictionary[i];
                 runningTotal += currentWord.chance;
 
-                if (runningTotal <= wordRoll) {
+                if (runningTotal > wordRoll) {
                     break;
                 }
             }
@@ -400,42 +403,59 @@ function generateSentence(weightedDictionary) {
         // Else, use the previous words followups to determine the next word
         else {
             // Check number of followups
+            let currentFollowup = null;
+            if (previousWord.followups.length === 0) {
+                previousWord = null;
+                continue;
+            }
             if (previousWord.followups.length === 1) {
                 // Pick the first followup if there's only one
-                currentWordKey = previousWord.followups[0].word;
+                currentFollowup = previousWord.followups[0];
             }
             else {
                 // Select a random followup from the previous words followup list
                 const followupRoll = Math.random();
                 
                 let runningTotal = 0;
-                let currentFollowup = null
-                for (let i = 0; i < previousWord.entries; ++i) {
+                for (let i = 0; i < previousWord.followups.length; ++i) {
                     currentFollowup = previousWord.followups[i];
                     runningTotal += currentFollowup.chance;
 
-                    if (runningTotal <= followupRoll) {
+                    if (runningTotal > followupRoll) {
                         break;
                     }
                 }
-
-                // Turn the followup into a word from the dictionary entries
-                currentWord = weightedDictionary.entries.filter((entry) => entry.word === currentFollowup.word);
             }
+
+            // If null entry returned, retry loop with completely random word
+            if (currentFollowup.word === "#:#null#:#") {
+                previousWord = null;
+                continue;
+            }
+
+            // Turn the followup into a word from the dictionary entries
+            currentWord = weightedDictionary.filter((entry) => entry.word === currentFollowup.word)[0];
         }
 
         // Select an appearance for the word
-        const appearanceRoll = Math.random();
-        let runningTotal = 0;
-        let currentAppearance = null
-        for (let i = 0; i < currentWord.appearances; ++i) {
-            currentAppearance = currentWord.appearances[i];
-            runningTotal += currentAppearance.chance;
+        let currentAppearance = null;
 
-            if (runningTotal <= appearanceRoll) {
-                break;
-            }
+        if (currentWord.appearances.length === 1) {
+            currentAppearance = currentWord.appearances[0];
         }
+        else {
+            let runningTotal = 0;
+            const appearanceRoll = Math.random();
+
+            for (let i = 0; i < currentWord.appearances.length; ++i) {
+                currentAppearance = currentWord.appearances[i];
+                runningTotal += currentAppearance.chance;
+
+                if (runningTotal > appearanceRoll) {
+                    break;
+                }
+            }
+        }   
         const wordToAdd = currentAppearance.text;
 
         // Add the word to the sentence

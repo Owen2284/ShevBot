@@ -395,8 +395,7 @@ function generateSentence(weightedDictionary) {
     let previousWord = null;
     while (wordsAdded < sentenceLength) {
         // Run a random check to see if the previous words followups will be ignored
-        // TODO: Config chance
-        const ignoreFollowups = Math.random() < 0.10;
+        const ignoreFollowups = Math.random() < config.shitpost.atypicalFollowUpChance;
 
         let currentWord = null;
 

@@ -7,6 +7,9 @@ const config = Object.freeze({
         githubRepo: process.env.BOT_GITHUB_REPO,
         websiteUrl: process.env.BOT_WEBSITE_URL
     },
+    files: {
+        backupInterval: parseInt(process.env.FILE_BACKUP_INTERVAL)
+    },
     logging: {
         fileSystemLoggingEnabled: process.env.FILE_SYSTEM_LOGGING_ENABLED === "1",
         fileSystemLoggingDirectories: {
@@ -51,7 +54,7 @@ const Handlebars = require("handlebars");
 // Shitpost data storage
 const wordDictionary = {
     version: "1.0",
-    entries: [],
+    entries: {},
     totalWordsProcessed: 0,
     channels: {}
 };
@@ -191,7 +194,16 @@ client.on("message", message => {
     }
 });
 
-// TODO: Dictionary saving and loading
+client.setInterval(() => {
+    // Save the dictionary to a file
+    try {
+        writeFile("data/dictionary.json", JSON.stringify(wordDictionary));
+        log("File", "Backed up dictionary.");
+    }
+    catch (e) {
+        error(e);
+    }
+}, config.files.backupInterval)
 
 function updateDictionary(channelId, messageBatch) {
     if (!wordDictionary.channels[channelId]) {

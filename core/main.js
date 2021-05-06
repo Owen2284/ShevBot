@@ -52,12 +52,15 @@ const EmojiList = require("emojis-list");
 const Handlebars = require("handlebars");
 
 // Shitpost data storage
-const wordDictionary = {
+let wordDictionary = {
     version: "1.0",
     entries: {},
     totalWordsProcessed: 0,
     channels: {}
 };
+if (fs.existsSync("data/dictionary.json")) {
+    wordDictionary = JSON.parse(readFile("data/dictionary.json"));
+}
 
 // Load in bot commands
 const commands = loadCommands();

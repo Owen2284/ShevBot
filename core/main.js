@@ -4,7 +4,11 @@ require('dotenv').config();
 const config = Object.freeze({
     bot: {
         commandCharacter: process.env.BOT_COMMAND_CHARACTER,
-        githubRepo: process.env.BOT_GITHUB_REPO
+        githubRepo: process.env.BOT_GITHUB_REPO,
+        websiteUrl: process.env.BOT_WEBSITE_URL
+    },
+    files: {
+        backupInterval: parseInt(process.env.FILE_BACKUP_INTERVAL)
     },
     logging: {
         fileSystemLoggingEnabled: process.env.FILE_SYSTEM_LOGGING_ENABLED === "1",
@@ -45,11 +49,18 @@ if (process.env.APPINSIGHTS_INSTRUMENTATIONKEY) {
 const Discord = require("discord.js");
 const express = require('express');
 const EmojiList = require("emojis-list");
+const Handlebars = require("handlebars");
 
 // Shitpost data storage
-const wordDictionary = {};
-let channelsLastProcessedTimes = {};
-let totalWords = 0;
+let wordDictionary = {
+    version: "1.0",
+    entries: {},
+    totalWordsProcessed: 0,
+    channels: {}
+};
+if (fs.existsSync("data/dictionary.json")) {
+    wordDictionary = JSON.parse(readFile("data/dictionary.json"));
+}
 
 // Load in bot commands
 const commands = loadCommands();
@@ -148,133 +159,21 @@ client.on("message", message => {
 
                 // Run the random check to see if there will be a shitpost
                 if (Math.random() < initialShitpostChance) {
-                    const channelLastProcessedTime = channelsLastProcessedTimes[channel.id] || 0;
-
                     // Fetch the most recent 100 messages from the channel
                     channel.messages.fetch({ limit: 100 })
                         .then((previousMessages) => {
-                            // Build a dictionary of all of the words in the previous 100 messages
-                            for (let [_, previousMessage] of previousMessages) {
-                                // Break out of loop if timestamp of message is before the last processed time for the channel
-                                if (previousMessage.createdTimestamp <= channelLastProcessedTime) {
-                                    break;
-                                }
+                            // Update the dictionary with this batch of messages
+                            updateDictionary(channel.id, previousMessages);
 
-                                // Ignore message if it has no content
-                                if (!previousMessage.content) {
-                                    continue;
-                                }
-
-                                // Ignore message if it was written by the us
-                                if (previousMessage.author.id === client.user.id) {
-                                    continue;
-                                }
-
-                                // Remove some punctuation from the sentence, then split on spaces
-                                const previousContentWords = previousMessage.content
-                                    .replace(/\./g, "").replace(/\,/g, "").replace(/\;/g, "")
-                                    .replace(/\!/g, "").replace(/\?/g, "").split(" ");
-
-                                for (let word of previousContentWords) {
-                                    // If the word is empty, ignore it
-                                    if (!word) {
-                                        continue;
-                                    }
-
-                                    // Ignore if word is a link, ignore it
-                                    if (word.includes("/") || word.includes("://")) {
-                                        continue;
-                                    }
-
-                                    // Trim the word
-                                    word = word.trim();
-
-                                    // Update the dictionary with the new instance of the word
-                                    if (wordDictionary[word] > 0) {
-                                        wordDictionary[word] = wordDictionary[word] + 1;
-                                    }
-                                    else {
-                                        wordDictionary[word] = 1;
-                                    }
-
-                                    totalWords++;
-                                }
-                            }
-
-                            // Update channel last processed time
-                            let firstMessage = null;
-                            for (let [_, previousMessage] of previousMessages) {
-                                firstMessage = previousMessage;
-                                break;
-                            }
-                            if (firstMessage) {
-                                channelsLastProcessedTimes[channel.id] = firstMessage.createdTimestamp || 0;
-                            }
-
-                            // Flatten dictionary into a list
-                            const wordList = [];
-                            for (let wordKey in wordDictionary) {
-                                wordList.push([wordKey, wordDictionary[wordKey]]);
-                            }
+                            // Get a version of the dictionary with correctly weighted chances
+                            const weightedDictionary = createWeightedDictionary();
 
                             // Determine the number of sentences to write
                             const sentenceCount = (Math.random() * config.shitpost.maxSentenceCount) + 1;
                             const sentenceList = [];
 
                             for (let sentenceNumber = 1; sentenceNumber <= sentenceCount; sentenceNumber++) {
-                                // Begin constructing the sentence
-                                let sentence = "";
-                                let wordsAdded = 0;
-
-                                // Determine a random length for the sentence, then loop until that length has been met
-                                const sentenceLength = (Math.random() * config.shitpost.maxSentenceLength) + 1;
-                                while (wordsAdded < sentenceLength) {
-                                    // Generate a random number corresponding to the word to add
-                                    const wordNumber = (Math.random() * totalWords) + 1;
-
-                                    let currentWordNumberSum = 0;
-                                    for (let [potentialWord, potentialWordCount] of wordList) {
-                                        // Add the number of occurrences of the word in the data to the running count;
-                                        currentWordNumberSum += potentialWordCount;
-
-                                        // If the running count exceeds the random value, then add the current word to the sentence
-                                        if (currentWordNumberSum > wordNumber) {
-                                            // Add the word itself to the sentence
-                                            sentence += potentialWord;
-
-                                            // Add a space after the word, with a chance to add an occasional comma
-                                            if (Math.random() < 0.08) {
-                                                sentence += ", ";
-                                            }
-                                            else {
-                                                sentence += " ";
-                                            }
-
-                                            // Break out of the loop
-                                            break;
-                                        }
-                                    }
-
-                                    wordsAdded++;
-                                }
-
-                                // Uppercase the start of the sentence, and trim the trailing spaces or comma
-                                sentence = sentence.substring(0, 1).toUpperCase() + sentence.substring(1);
-                                while (sentence.endsWith(",") || sentence.endsWith(" ")) {
-                                    sentence = sentence.substring(0, sentence.length - 1);
-                                }
-
-                                // Pick a random end character
-                                const endRandomValue = Math.random();
-                                if (endRandomValue <= 0.5) {
-                                    sentence += ".";
-                                }
-                                else if (endRandomValue <= 0.75) {
-                                    sentence += "?";
-                                }
-                                else {
-                                    sentence += "!";
-                                }
+                                const sentence = generateSentence(weightedDictionary);
 
                                 // Add the sentence to the list
                                 sentenceList.push(sentence);
@@ -297,6 +196,320 @@ client.on("message", message => {
         }
     }
 });
+
+client.setInterval(() => {
+    // Save the dictionary to a file
+    try {
+        writeFile("data/dictionary.json", JSON.stringify(wordDictionary));
+        log("File", "Backed up dictionary.");
+    }
+    catch (e) {
+        error(e);
+    }
+}, config.files.backupInterval)
+
+function updateDictionary(channelId, messageBatch) {
+    if (!wordDictionary.channels[channelId]) {
+        wordDictionary.channels[channelId] = {
+            lastCheckTime: 0
+        };
+    }
+    const channelEntry = wordDictionary.channels[channelId];
+
+    // Run through the message batch
+    for (let [_, message] of messageBatch) {
+        // Break out of loop if timestamp of message is before the last processed time for the channel
+        if (message.createdTimestamp <= channelEntry.lastCheckTime) {
+            break;
+        }
+
+        // Ignore message if it has no content, or if it was written by a bot
+        if (!message.content || message.author.bot) {
+            continue;
+        }
+
+        // Create list to hold finished word chain
+        let messageWordChain = [];
+
+        // Split the word by spaces for processing
+        for (let word of message.content.split(" ")) {
+            // If word is a link, ignore it
+            if (word.includes("://")) {
+                messageWordChain.push(null);
+                continue;
+            }
+
+            // Remove select characters from the word (unless it's an emoji)
+            let sentenceEnder = false;
+            if (!word.startsWith("<:") || !word.endsWith(">")) {
+                word = word.replace(/[^a-zA-Z0-9_\-\'.?!]/g, " ").trim();
+
+                // Determine if this word is the end of a sentence
+                if (word.endsWith(".") || word.endsWith("!") || word.endsWith("?")) {
+                    sentenceEnder = true;
+                }
+
+                word = word.replace(/[.?!]/g, " ").trim();
+            }
+
+            // If the word is empty/null/undefined, ignore it
+            if (!word) {
+                messageWordChain.push(null);
+                continue;
+            }
+
+            // Else, word is good, add it to the chain
+            messageWordChain.push(word);
+
+            // If word was at the end of a sentence, add a break after it in the chain
+            if (sentenceEnder) {
+                messageWordChain.push(null);
+            }
+        }
+
+        // Run through message word chain and update dictionary
+        for (let i = 0; i < messageWordChain.length; ++i) {
+            // Pull out the current and next word
+            const word = messageWordChain[i];
+            const nextWord = i + 1 < messageWordChain.length ? messageWordChain[i + 1] : null;
+
+            // Continue if the current word was removed, or was the end of a sentence
+            if (!word) {
+                continue;
+            }
+
+            // Add entry for the current word to the dictionary if it doesn't exist
+            if (!wordDictionary.entries[word.toLowerCase()]) {
+                wordDictionary.entries[word.toLowerCase()] = {
+                    count: 0,
+                    appearances: {},
+                    followups: {}
+                };
+            }
+            const dictionaryEntry = wordDictionary.entries[word.toLowerCase()];
+
+            // Increase the count of times the word has appeared
+            dictionaryEntry.count += 1;
+
+            // Add the appearance to the list if not present
+            if (!dictionaryEntry.appearances[word]) {
+                dictionaryEntry.appearances[word] = {
+                    count: 0
+                };
+            }
+            const appearanceEntry = dictionaryEntry.appearances[word];
+
+            // Increment the number of times that appearance has appeared
+            appearanceEntry.count += 1;
+
+            // Add the next word to the followup list if not present
+            let followupEntry = null;
+            if (!nextWord) {
+                followupEntry = dictionaryEntry.followups["#:#null#:#"];
+                if (!followupEntry) {
+                    dictionaryEntry.followups["#:#null#:#"] = {
+                        count: 0
+                    };
+                    followupEntry = dictionaryEntry.followups["#:#null#:#"];
+                }
+            }
+            else {
+                followupEntry = dictionaryEntry.followups[nextWord.toLowerCase()];
+                if (!!nextWord && !followupEntry) {
+                    dictionaryEntry.followups[nextWord.toLowerCase()] = {
+                        count: 0
+                    };
+                    followupEntry = dictionaryEntry.followups[nextWord.toLowerCase()];
+                }
+            }
+
+            // Increment the count of the next word following up the current word
+            followupEntry.count += 1;
+
+            // Increment the total word processed count of the dictionary
+            wordDictionary.totalWordsProcessed += 1;
+        }
+    }
+
+    // Update channel last processed time
+    let newestMessage = null;
+    for (let [_, message] of messageBatch) {
+        newestMessage = message;
+        break;
+    }
+    if (newestMessage) {
+        channelEntry.lastCheckTime = newestMessage.createdTimestamp;
+    }
+}
+
+function createWeightedDictionary() {
+    const weightedDictionary = [];
+
+    // Loop though every entry
+    for (let entryKey in wordDictionary.entries) {
+        const entry = wordDictionary.entries[entryKey];
+        const weightedEntry = {
+            word: entryKey,
+            chance: 0,
+            appearances: [],
+            followups: []
+        }
+
+        // Calculate the chance of that entry being chosen
+        weightedEntry.chance = entry.count / wordDictionary.totalWordsProcessed;
+
+        // Calculate the chance of each appearance of the word being used
+        for (let appearanceEntryKey in entry.appearances) {
+            const appearanceEntry = entry.appearances[appearanceEntryKey];
+            weightedEntry.appearances.push({
+                text: appearanceEntryKey,
+                chance: appearanceEntry.count / entry.count
+            })
+        }
+
+        // Calculate the chance of each followup being used
+        for (let followupEntryKey in entry.followups) {
+            const followupEntry = entry.followups[followupEntryKey];
+            weightedEntry.followups.push({
+                word: followupEntryKey,
+                chance: followupEntry.count / entry.count
+            })
+        }
+        
+        // Add the weighted entry to the weighted dictionary
+        weightedDictionary.push(weightedEntry);
+    }
+
+    return weightedDictionary;
+}
+
+function generateSentence(weightedDictionary) {
+    // Begin constructing the sentence
+    let sentence = "";
+    let wordsAdded = 0;
+
+    // Determine a random length for the sentence
+    const sentenceLength = (Math.random() * config.shitpost.maxSentenceLength) + 1;
+
+    // Loop until sentence length has been met
+    let previousWord = null;
+    while (wordsAdded < sentenceLength) {
+        // Run a random check to see if the previous words followups will be ignored
+        const ignoreFollowups = Math.random() < config.shitpost.atypicalFollowUpChance;
+
+        let currentWord = null;
+
+        // If this is the first word of the sentence, then select a random word 
+        if (!previousWord || ignoreFollowups) {
+            // Generate random float, and use that to determine the word
+            const wordRoll = Math.random();
+
+            let runningTotal = 0;
+            for (let i = 0; i < weightedDictionary.length; ++i) {
+                currentWord = weightedDictionary[i];
+                runningTotal += currentWord.chance;
+
+                if (runningTotal > wordRoll) {
+                    break;
+                }
+            }
+        }
+        // Else, use the previous words followups to determine the next word
+        else {
+            // Check number of followups
+            let currentFollowup = null;
+            if (previousWord.followups.length === 0) {
+                previousWord = null;
+                continue;
+            }
+            if (previousWord.followups.length === 1) {
+                // Pick the first followup if there's only one
+                currentFollowup = previousWord.followups[0];
+            }
+            else {
+                // Select a random followup from the previous words followup list
+                const followupRoll = Math.random();
+                
+                let runningTotal = 0;
+                for (let i = 0; i < previousWord.followups.length; ++i) {
+                    currentFollowup = previousWord.followups[i];
+                    runningTotal += currentFollowup.chance;
+
+                    if (runningTotal > followupRoll) {
+                        break;
+                    }
+                }
+            }
+
+            // If null entry returned, retry loop with completely random word
+            if (currentFollowup.word === "#:#null#:#") {
+                previousWord = null;
+                continue;
+            }
+
+            // Turn the followup into a word from the dictionary entries
+            currentWord = weightedDictionary.filter((entry) => entry.word === currentFollowup.word)[0];
+        }
+
+        // Select an appearance for the word
+        let currentAppearance = null;
+
+        if (currentWord.appearances.length === 1) {
+            currentAppearance = currentWord.appearances[0];
+        }
+        else {
+            let runningTotal = 0;
+            const appearanceRoll = Math.random();
+
+            for (let i = 0; i < currentWord.appearances.length; ++i) {
+                currentAppearance = currentWord.appearances[i];
+                runningTotal += currentAppearance.chance;
+
+                if (runningTotal > appearanceRoll) {
+                    break;
+                }
+            }
+        }   
+        const wordToAdd = currentAppearance.text;
+
+        // Add the word to the sentence
+        sentence += wordToAdd;
+
+        // Add a space after the word, with a chance to add an occasional comma
+        if (Math.random() < 0.08) {
+            sentence += ", ";
+        }
+        else {
+            sentence += " ";
+        }
+
+        // Store the current word as the previous word, and repeat.
+        previousWord = currentWord;
+
+        wordsAdded++;
+    }
+
+    // Uppercase the start of the sentence, and trim the trailing spaces or comma
+    sentence = sentence.substring(0, 1).toUpperCase() + sentence.substring(1);
+    while (sentence.endsWith(",") || sentence.endsWith(" ")) {
+        sentence = sentence.substring(0, sentence.length - 1);
+    }
+
+    // Pick a random end character
+    const endRandomValue = Math.random();
+    if (endRandomValue <= 0.6) {
+        sentence += ".";
+    }
+    else if (endRandomValue <= 0.8) {
+        sentence += "?";
+    }
+    else {
+        sentence += "!";
+    }
+
+    // Return the sentence
+    return sentence;
+}
 
 // General command for console logging.
 function log(type, text, toConsole = true, toFile = true, toTelemetry = true) {
@@ -488,8 +701,47 @@ try {
     const app = express();
 
     app.get('/', (req, res) => {
-        res.send(readFile("site/index.html"));
+        // Read handlebars file and convert into template
+        const source = readFile(path.resolve(__dirname, "./../site/pages/index.hbs"));
+        const template = Handlebars.compile(source);
+
+        // Determine online time
+        const onlineMilliseconds = client.uptime;
+
+        const onlineDays = Math.trunc(onlineMilliseconds / 86400000);
+        const onlineHours = Math.trunc(onlineMilliseconds / 3600000) % 24;
+        const onlineMinutes = Math.trunc(onlineMilliseconds / 60000) % 60;
+        const onlineSeconds = Math.trunc(onlineMilliseconds / 1000) % 60;
+
+        let onlineTime = "";
+        if (onlineDays > 0) {
+            onlineTime += `${onlineDays} day(s), `;
+        }
+        if (onlineHours > 0) {
+            onlineTime += `${onlineHours} hour(s), `;
+        }
+        if (onlineMinutes > 0) {
+            onlineTime += `${onlineMinutes} minute(s), `;
+        }
+        if (onlineSeconds > 0) {
+            onlineTime += `${onlineSeconds} second(s)`;
+        }
+        
+        if (!onlineTime) {
+            onlineTime = "0 seconds";
+        }
+        else if (onlineTime.endsWith(", ")) {
+            onlineTime = onlineTime.substring(0, onlineTime.length - 2);
+        }
+
+        // Generate the page from the template and repsond
+        res.send(template({
+            githubRepo: config.bot.githubRepo,
+            onlineTime,
+            serverCount: client.guilds.cache.size || 0
+        }));
     });
+    app.use(express.static(path.resolve(__dirname, "./../site/static")));
     app.listen(config.webserver.port);
 
     log("Boot", "Web server spun up.");

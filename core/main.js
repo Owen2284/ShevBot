@@ -29,7 +29,8 @@ const config = Object.freeze({
         initialShitpostChance: parseFloat(process.env.SHITPOST_INITIAL_CHANCE),
         atypicalFollowUpChance: parseFloat(process.env.SHITPOST_ATYPICAL_FOLLOWUP_CHANCE),
         maxSentenceLength: parseInt(process.env.SHITPOST_MAX_SENTENCE_LENGTH),
-        maxSentenceCount: parseInt(process.env.SHITPOST_MAX_SENTENCE_COUNT)
+        maxSentenceCount: parseInt(process.env.SHITPOST_MAX_SENTENCE_COUNT),
+        randomSentenceTryInterval: parseInt(process.env.SHITPOST_RANDOM_SENTENCE_TRY_INTERVAL)
     }
 });
 
@@ -75,128 +76,29 @@ client.commands = commands;
 // Set up bot event handlers
 client.on("message", message => {
     const sender = message.author;
-	const channel = message.channel;
-	const content = message.content;
+    const channel = message.channel;
+    const content = message.content;
 
-	const isCommand = content.substring(0, 1) === config.bot.commandCharacter;	
-	const isBot = sender.bot;
-	const isSelf = sender.id === client.user.id;
+    const isCommand = content.substring(0, 1) === config.bot.commandCharacter;
+    const isBot = sender.bot;
+    const isSelf = sender.id === client.user.id;
 
     if (isCommand && !isBot) {
         // Command
-        try {
-            // Split command
-            const commandParts = content.split(" "); 
-            commandParts[0] = commandParts[0].replace(config.bot.commandCharacter, "");
-
-            // Try to find the command
-            let commandRun = false;
-            for (let command of commands) {
-                if (command.name.toUpperCase() === commandParts[0].toUpperCase()) {
-                    // TODO: Check if command is usable in channel
-
-                    let args = commandParts.slice(1);
-                    command.process(args, client, message);
-                    commandRun = true;
-                }
-            }
-
-            // Let user know if command couldn't be found
-            if (!commandRun) {
-                channel.send(`Sorry, I couldn't find the ${config.bot.commandCharacter}${commandParts[0].toUpperCase()} command.`);
-            }
-        }
-        catch (e) {
-            error(e);
-        }
+        commandProtocol(channel, content, message);
     }
     else if (!isCommand) {
         // Reactions
-        try {
-            const initialReactChance = config.reactions.initialReactChance;
-            const multiReactChance = config.reactions.guildEmojiChance;
-            const guildReactChance = config.reactions.multiReactChance; 
-            let reactCount = 0;
-
-            // Run the first random chance for whether there will be any reactions or not
-            if (Math.random() < initialReactChance) {
-                const standardEmoji = EmojiList;
-                const guildEmoji = client.emojis.cache.array().filter(i => !i.animated);
-
-                // Loop while the chance of reacting again passes (or until the limit is hit)
-                const usedEmoji = [];
-                do {
-                    // Select a random unused emoji
-                    let reactionEmoji = null;
-                    do {
-                        if (Math.random() < guildReactChance) {
-                            reactionEmoji = guildEmoji[Math.floor(Math.random() * guildEmoji.length)];
-                        }
-                        else {
-                            reactionEmoji = standardEmoji[Math.floor(Math.random() * standardEmoji.length)];
-                        }                        
-                    } while (usedEmoji.includes(reactionEmoji));
-
-                    // Add selected emoji to the used list
-                    usedEmoji.push(reactionEmoji);
-
-                    // React to the message with the given emjoi
-                    message.react(reactionEmoji);
-
-                    ++reactCount;
-                } while (Math.random() < multiReactChance && reactCount < 20);
-
-                log("React", "Reacted to message " + message.id + " with " + reactCount + " emoji");
-            }
-        } catch (e) {
-            error(e);
-        }
+        reactionProtocol(message);
 
         if (!isSelf) {
             // Shitpost
-            try {
-                const initialShitpostChance = config.shitpost.initialShitpostChance;
-
-                // Run the random check to see if there will be a shitpost
-                if (Math.random() < initialShitpostChance) {
-                    // Fetch the most recent 100 messages from the channel
-                    channel.messages.fetch({ limit: 100 })
-                        .then((previousMessages) => {
-                            // Update the dictionary with this batch of messages
-                            updateDictionary(channel.id, previousMessages);
-
-                            // Get a version of the dictionary with correctly weighted chances
-                            const weightedDictionary = createWeightedDictionary();
-
-                            // Determine the number of sentences to write
-                            const sentenceCount = (Math.random() * config.shitpost.maxSentenceCount) + 1;
-                            const sentenceList = [];
-
-                            for (let sentenceNumber = 1; sentenceNumber <= sentenceCount; sentenceNumber++) {
-                                const sentence = generateSentence(weightedDictionary);
-
-                                // Add the sentence to the list
-                                sentenceList.push(sentence);
-                            }
-
-                            // Construct the message from the sentence list
-                            const joinedSentences = sentenceList.join(" ");
-
-                            // Send the message
-                            channel.send(joinedSentences);
-                            
-                            // Log action
-                            log("Shitpost", "Posted a message");
-                        });
-                }
-            }
-            catch (e) {
-                error(e);
-            }
+            shitpostProtocol(channel);
         }
     }
 });
 
+// Backup interval
 client.setInterval(() => {
     // Save the dictionary to a file
     try {
@@ -207,6 +109,148 @@ client.setInterval(() => {
         error(e);
     }
 }, config.files.backupInterval)
+
+// Reaction interval
+client.setInterval(() => {
+    // Return early if no channels
+    const channels = client.channels.cache.filter(() => true);
+    if (!channels.size) {
+        return;
+    }
+
+    // Find most recently checked channel
+    let targetChannelId = 0;
+    let newestCheckTime = 0;
+    for (let channelId in wordDictionary.channels) {
+        const lastCheckTime = wordDictionary.channels[channelId].lastCheckTime;
+        if (lastCheckTime > newestCheckTime) {
+            targetChannelId = channelId;
+            newestCheckTime = lastCheckTime;
+        }
+    }
+
+    // If no channel found, return
+    if (targetChannelId === 0) {
+        return;
+    }
+
+    // Find channel, and try to send shitpost
+    const targetChannel = client.channels.cache.filter((channel) => channel.id === targetChannelId).array()[0];
+    shitpostProtocol(targetChannel);
+
+}, config.shitpost.randomSentenceTryInterval);
+
+function commandProtocol(channel, content, message) {
+    try {
+        // Split command
+        const commandParts = content.split(" ");
+        commandParts[0] = commandParts[0].replace(config.bot.commandCharacter, "");
+
+        // Try to find the command
+        let commandRun = false;
+        for (let command of commands) {
+            if (command.name.toUpperCase() === commandParts[0].toUpperCase()) {
+                // TODO: Check if command is usable in channel
+
+                let args = commandParts.slice(1);
+                command.process(args, client, message);
+                commandRun = true;
+            }
+        }
+
+        // Let user know if command couldn't be found
+        if (!commandRun) {
+            channel.send(`Sorry, I couldn't find the ${config.bot.commandCharacter}${commandParts[0].toUpperCase()} command.`);
+        }
+    }
+    catch (e) {
+        error(e);
+    }
+}
+
+function reactionProtocol(message) {
+    try {
+        const initialReactChance = config.reactions.initialReactChance;
+        const multiReactChance = config.reactions.guildEmojiChance;
+        const guildReactChance = config.reactions.multiReactChance;
+        let reactCount = 0;
+
+        // Run the first random chance for whether there will be any reactions or not
+        if (Math.random() < initialReactChance) {
+            const standardEmoji = EmojiList;
+            const guildEmoji = client.emojis.cache.array().filter(i => !i.animated);
+
+            // Loop while the chance of reacting again passes (or until the limit is hit)
+            const usedEmoji = [];
+            do {
+                // Select a random unused emoji
+                let reactionEmoji = null;
+                do {
+                    if (Math.random() < guildReactChance) {
+                        reactionEmoji = guildEmoji[Math.floor(Math.random() * guildEmoji.length)];
+                    }
+                    else {
+                        reactionEmoji = standardEmoji[Math.floor(Math.random() * standardEmoji.length)];
+                    }
+                } while (usedEmoji.includes(reactionEmoji));
+
+                // Add selected emoji to the used list
+                usedEmoji.push(reactionEmoji);
+
+                // React to the message with the given emjoi
+                message.react(reactionEmoji);
+
+                ++reactCount;
+            } while (Math.random() < multiReactChance && reactCount < 20);
+
+            log("React", "Reacted to message " + message.id + " with " + reactCount + " emoji");
+        }
+    } catch (e) {
+        error(e);
+    }
+}
+
+function shitpostProtocol(channel) {
+    try {
+        const initialShitpostChance = config.shitpost.initialShitpostChance;
+
+        // Run the random check to see if there will be a shitpost
+        if (Math.random() < initialShitpostChance) {
+            // Fetch the most recent 100 messages from the channel
+            channel.messages.fetch({ limit: 100 })
+                .then((previousMessages) => {
+                    // Update the dictionary with this batch of messages
+                    updateDictionary(channel.id, previousMessages);
+
+                    // Get a version of the dictionary with correctly weighted chances
+                    const weightedDictionary = createWeightedDictionary();
+
+                    // Determine the number of sentences to write
+                    const sentenceCount = (Math.random() * config.shitpost.maxSentenceCount) + 1;
+                    const sentenceList = [];
+
+                    for (let sentenceNumber = 1; sentenceNumber <= sentenceCount; sentenceNumber++) {
+                        const sentence = generateSentence(weightedDictionary);
+
+                        // Add the sentence to the list
+                        sentenceList.push(sentence);
+                    }
+
+                    // Construct the message from the sentence list
+                    const joinedSentences = sentenceList.join(" ");
+
+                    // Send the message
+                    channel.send(joinedSentences);
+
+                    // Log action
+                    log("Shitpost", "Posted a message");
+                });
+        }
+    }
+    catch (e) {
+        error(e);
+    }
+}
 
 function updateDictionary(channelId, messageBatch) {
     if (!wordDictionary.channels[channelId]) {
@@ -375,7 +419,7 @@ function createWeightedDictionary() {
                 chance: followupEntry.count / entry.count
             })
         }
-        
+
         // Add the weighted entry to the weighted dictionary
         weightedDictionary.push(weightedEntry);
     }
@@ -429,7 +473,7 @@ function generateSentence(weightedDictionary) {
             else {
                 // Select a random followup from the previous words followup list
                 const followupRoll = Math.random();
-                
+
                 let runningTotal = 0;
                 for (let i = 0; i < previousWord.followups.length; ++i) {
                     currentFollowup = previousWord.followups[i];
@@ -469,7 +513,7 @@ function generateSentence(weightedDictionary) {
                     break;
                 }
             }
-        }   
+        }
         const wordToAdd = currentAppearance.text;
 
         // Add the word to the sentence
@@ -513,36 +557,36 @@ function generateSentence(weightedDictionary) {
 
 // General command for console logging.
 function log(type, text, toConsole = true, toFile = true, toTelemetry = true) {
-	// Constant determining how long the type should be.
-	const BUFFER_LENGTH = 8;
+    // Constant determining how long the type should be.
+    const BUFFER_LENGTH = 8;
 
-	// Creating initial string.
-	let message = "[" + getTimeString() + "] [";
+    // Creating initial string.
+    let message = "[" + getTimeString() + "] [";
 
-	// Add the type to the message string
-	if (type.length <= BUFFER_LENGTH) {
-		message += type;
+    // Add the type to the message string
+    if (type.length <= BUFFER_LENGTH) {
+        message += type;
 
         // Buffing length if type is too short.
-		for (var i = 0; i < BUFFER_LENGTH - type.length; ++i) {
+        for (var i = 0; i < BUFFER_LENGTH - type.length; ++i) {
             message += " ";
         }
-	}
-	// Shortening type if too long.
-	else if (type.length > BUFFER_LENGTH) {
-		message += type.substring(0, 7);
-	} 
+    }
+    // Shortening type if too long.
+    else if (type.length > BUFFER_LENGTH) {
+        message += type.substring(0, 7);
+    }
 
-	// Close off string and log the message.
-	message += "] " + text;
+    // Close off string and log the message.
+    message += "] " + text;
 
     // Log to console
-	if (toConsole) {
+    if (toConsole) {
         console.log(message);
     }
 
     // Log to file
-	if (config.logging.fileSystemLoggingEnabled && toFile) {
+    if (config.logging.fileSystemLoggingEnabled && toFile) {
         const fileName = config.logging.fileSystemLoggingDirectories.logs + "/" + getDateString("-", true) + ".txt";
         writeFile(fileName, message + "\n", true);
     }
@@ -551,7 +595,7 @@ function log(type, text, toConsole = true, toFile = true, toTelemetry = true) {
     try {
         if (telemetryClient && toTelemetry) {
             telemetryClient.trackTrace({
-                message 
+                message
             });
         }
     }
@@ -583,41 +627,41 @@ function error(error) {
 
 // Gets the time for the TIME command.
 function getTimeString(delimeter = ":") {
-	var date = new Date();
-	
-    var hours = date.getHours().toString(); 
+    var date = new Date();
+
+    var hours = date.getHours().toString();
     if (hours.length < 2) {
         hours = "0" + hours;
     }
-	
-    var mins = date.getMinutes().toString(); 
+
+    var mins = date.getMinutes().toString();
     if (mins.length < 2) {
         mins = "0" + mins;
     }
-	
-    var secs = date.getSeconds().toString(); 
+
+    var secs = date.getSeconds().toString();
     if (secs.length < 2) {
         secs = "0" + secs;
     }
-	
+
     return hours + delimeter + mins + delimeter + secs;
 }
 
 // Gets the date for the date command.
 function getDateString(delimeter = "/", flip = false) {
-	var date = new Date();
+    var date = new Date();
 
-	var day = date.getDate().toString(); 
+    var day = date.getDate().toString();
     if (day.length < 2) {
         day = "0" + day;
     }
 
-	var month = (date.getMonth() + 1).toString(); 
+    var month = (date.getMonth() + 1).toString();
     if (month.length < 2) {
         month = "0" + month;
-    
+
     }
-	var year = date.getFullYear().toString();
+    var year = date.getFullYear().toString();
 
     if (!flip) {
         return day + delimeter + month + delimeter + year;
@@ -625,12 +669,12 @@ function getDateString(delimeter = "/", flip = false) {
     else {
         return year + delimeter + month + delimeter + day;
     }
-	
+
 }
 
 // Loads in a file at the specified path.
 function readFile(path) {
-	return fs.readFileSync(path, "utf8");
+    return fs.readFileSync(path, "utf8");
 }
 
 // Writes a string to a file specified by path.
@@ -688,12 +732,12 @@ function loadCommands() {
 
 // Activate the bot.
 try {
-	client.login(process.env.BOT_TOKEN);
+    client.login(process.env.BOT_TOKEN);
     log("Boot", "Bot logged in.");
 } catch (e) {
-	error(e);
-	client.destroy();
-	process.exit(1);
+    error(e);
+    client.destroy();
+    process.exit(1);
 }
 
 // Spin up a web server to keep live checks happy for now.
@@ -726,7 +770,7 @@ try {
         if (onlineSeconds > 0) {
             onlineTime += `${onlineSeconds} second(s)`;
         }
-        
+
         if (!onlineTime) {
             onlineTime = "0 seconds";
         }
@@ -748,6 +792,6 @@ try {
 }
 catch (e) {
     error(e);
-	client.destroy();
-	process.exit(1);
+    client.destroy();
+    process.exit(1);
 }

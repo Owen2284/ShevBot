@@ -26,9 +26,164 @@ function saveShitpostWordDictionary(wordDictionary) {
     }
 }
 
+function processWord(word) {
+    // If word is a link, ignore it
+    if (word.includes("://")) {
+        return [];
+    }
+
+    // Check if word is a special Discord string
+    const isDiscordEmoji = !!word.match(/<:[A-z0-9_-]+:[0-9]+>/);
+    const isDiscordUserTag = !!word.match(/<@![0-9]+>/);
+    const isDiscordChannelTag = !!word.match(/<#[0-9]+>/);
+
+    // If word is a channel tag, ignore it
+    if (isDiscordChannelTag) {
+        return [];
+    }
+
+    // Remove select characters from the word (unless it's an emoji or user tag)
+    let sentenceEnder = false;
+    if (!isDiscordEmoji && !isDiscordUserTag) {
+        word = word.replace(/[^a-zA-Z0-9_\-\'.?!]/g, " ").trim();
+
+        // Determine if this word is the end of a sentence
+        if (word.endsWith(".") || word.endsWith("!") || word.endsWith("?")) {
+            sentenceEnder = true;
+        }
+
+        word = word.replace(/[.?!]/g, " ").trim();
+
+        // If the word is empty/null/undefined, ignore it
+        if (!word) {
+            return [];
+        }
+
+        // Else, word is good, but check if replacement caused word to need further splitting
+        const wordChain = [];
+        const splitWord = word.split(" ");
+        if (splitWord.length == 1) {
+            // Only one word, all is good, add to list
+            wordChain.push(word);
+        }
+        else if (splitWord.length > 1) {
+            // More than one word, reprocess and then add to list
+            for (let splitWordWord of splitWord) {
+                const reprocessedWords = processWord(splitWordWord);
+                for (reprocessedWord of reprocessedWords) {
+                    wordChain.push(reprocessedWord);
+                }
+            }
+        }
+
+        // If word was at the end of a sentence, add a break after it in the chain
+        if (sentenceEnder) {
+            wordChain.push(null);
+        }
+
+        return wordChain;
+    }
+    else {
+        // Trim any attached punctuation
+        const trailingPunctuationStart = /^[,]+/;
+        const trailingPunctuationEnd = /[,]+$/;
+
+        word = word.replace(trailingPunctuationStart, "").replace(trailingPunctuationEnd, "");
+
+        return [word];
+    }
+}
+
+function breakDownString(string) {
+    let messageWordChain = [];
+
+    // Return early if empty string passed in
+    if (!string) {
+        return messageWordChain;
+    }
+
+    // Split the word by spaces for processing
+    for (let word of string.split(" ")) {
+        const processedWords = processWord(word);
+
+        for (let processedWord of processedWords) {
+            messageWordChain.push(processedWord);
+        }
+    }
+
+    return messageWordChain;
+}
+
+function addMessageToShitpostWordDictionary(wordDictionary, messageWordChain) {
+    // Run through message word chain and update dictionary
+    for (let i = 0; i < messageWordChain.length; ++i) {
+        // Pull out the current and next word
+        const word = messageWordChain[i];
+        const nextWord = i + 1 < messageWordChain.length ? messageWordChain[i + 1] : null;
+
+        // Continue if the current word was removed, or was the end of a sentence
+        if (!word) {
+            continue;
+        }
+
+        // Add entry for the current word to the dictionary if it doesn't exist
+        if (!wordDictionary.entries[word.toLowerCase()]) {
+            wordDictionary.entries[word.toLowerCase()] = {
+                count: 0,
+                appearances: {},
+                followups: {}
+            };
+        }
+        const dictionaryEntry = wordDictionary.entries[word.toLowerCase()];
+
+        // Increase the count of times the word has appeared
+        dictionaryEntry.count += 1;
+
+        // Add the appearance to the list if not present
+        if (!dictionaryEntry.appearances[word]) {
+            dictionaryEntry.appearances[word] = {
+                count: 0
+            };
+        }
+        const appearanceEntry = dictionaryEntry.appearances[word];
+
+        // Increment the number of times that appearance has appeared
+        appearanceEntry.count += 1;
+
+        // Add the next word to the followup list if not present
+        let followupEntry = null;
+        if (!nextWord) {
+            followupEntry = dictionaryEntry.followups["#:#null#:#"];
+            if (!followupEntry) {
+                dictionaryEntry.followups["#:#null#:#"] = {
+                    count: 0
+                };
+                followupEntry = dictionaryEntry.followups["#:#null#:#"];
+            }
+        }
+        else {
+            followupEntry = dictionaryEntry.followups[nextWord.toLowerCase()];
+            if (!!nextWord && !followupEntry) {
+                dictionaryEntry.followups[nextWord.toLowerCase()] = {
+                    count: 0
+                };
+                followupEntry = dictionaryEntry.followups[nextWord.toLowerCase()];
+            }
+        }
+
+        // Increment the count of the next word following up the current word
+        followupEntry.count += 1;
+
+        // Increment the total word processed count of the dictionary
+        wordDictionary.totalWordsProcessed += 1;
+    }
+
+    return wordDictionary;
+}
+
 function updateShitpostDictionary(channelId, messageBatch) {
     // Read word dictionary from file
-    const wordDictionary = getShitpostWordDictionary();
+    let wordDictionary = getShitpostWordDictionary();
 
     if (!wordDictionary.channels[channelId]) {
         wordDictionary.channels[channelId] = {
@@ -50,106 +205,9 @@ function updateShitpostDictionary(channelId, messageBatch) {
         }
 
         // Create list to hold finished word chain
-        let messageWordChain = [];
+        const messageWordChain = breakDownString(message.content);
 
-        // Split the word by spaces for processing
-        for (let word of message.content.split(" ")) {
-            // If word is a link, ignore it
-            if (word.includes("://")) {
-                messageWordChain.push(null);
-                continue;
-            }
-
-            // Remove select characters from the word (unless it's an emoji)
-            let sentenceEnder = false;
-            if (!word.startsWith("<:") || !word.endsWith(">")) {
-                word = word.replace(/[^a-zA-Z0-9_\-\'.?!]/g, " ").trim();
-
-                // Determine if this word is the end of a sentence
-                if (word.endsWith(".") || word.endsWith("!") || word.endsWith("?")) {
-                    sentenceEnder = true;
-                }
-
-                word = word.replace(/[.?!]/g, " ").trim();
-            }
-
-            // If the word is empty/null/undefined, ignore it
-            if (!word) {
-                messageWordChain.push(null);
-                continue;
-            }
-
-            // Else, word is good, add it to the chain
-            messageWordChain.push(word);
-
-            // If word was at the end of a sentence, add a break after it in the chain
-            if (sentenceEnder) {
-                messageWordChain.push(null);
-            }
-        }
-
-        // Run through message word chain and update dictionary
-        for (let i = 0; i < messageWordChain.length; ++i) {
-            // Pull out the current and next word
-            const word = messageWordChain[i];
-            const nextWord = i + 1 < messageWordChain.length ? messageWordChain[i + 1] : null;
-
-            // Continue if the current word was removed, or was the end of a sentence
-            if (!word) {
-                continue;
-            }
-
-            // Add entry for the current word to the dictionary if it doesn't exist
-            if (!wordDictionary.entries[word.toLowerCase()]) {
-                wordDictionary.entries[word.toLowerCase()] = {
-                    count: 0,
-                    appearances: {},
-                    followups: {}
-                };
-            }
-            const dictionaryEntry = wordDictionary.entries[word.toLowerCase()];
-
-            // Increase the count of times the word has appeared
-            dictionaryEntry.count += 1;
-
-            // Add the appearance to the list if not present
-            if (!dictionaryEntry.appearances[word]) {
-                dictionaryEntry.appearances[word] = {
-                    count: 0
-                };
-            }
-            const appearanceEntry = dictionaryEntry.appearances[word];
-
-            // Increment the number of times that appearance has appeared
-            appearanceEntry.count += 1;
-
-            // Add the next word to the followup list if not present
-            let followupEntry = null;
-            if (!nextWord) {
-                followupEntry = dictionaryEntry.followups["#:#null#:#"];
-                if (!followupEntry) {
-                    dictionaryEntry.followups["#:#null#:#"] = {
-                        count: 0
-                    };
-                    followupEntry = dictionaryEntry.followups["#:#null#:#"];
-                }
-            }
-            else {
-                followupEntry = dictionaryEntry.followups[nextWord.toLowerCase()];
-                if (!!nextWord && !followupEntry) {
-                    dictionaryEntry.followups[nextWord.toLowerCase()] = {
-                        count: 0
-                    };
-                    followupEntry = dictionaryEntry.followups[nextWord.toLowerCase()];
-                }
-            }
-
-            // Increment the count of the next word following up the current word
-            followupEntry.count += 1;
-
-            // Increment the total word processed count of the dictionary
-            wordDictionary.totalWordsProcessed += 1;
-        }
+        wordDictionary = addMessageToShitpostWordDictionary(wordDictionary, messageWordChain);
     }
 
     // Update channel last processed time
@@ -367,5 +425,10 @@ async function generateShitpostMessage(client, channel) {
 
 module.exports = {
     getShitpostWordDictionary,
+    updateShitpostDictionary,
+    breakDownString,
+    addMessageToShitpostWordDictionary,
+    createWeightedShitpostDictionary,
+    generateShitpostSentence,
     generateShitpostMessage
 };

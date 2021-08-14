@@ -5,9 +5,6 @@ function buildConfig() {
             githubRepo: process.env.BOT_GITHUB_REPO,
             websiteUrl: process.env.BOT_WEBSITE_URL
         },
-        files: {
-            backupInterval: parseInt(process.env.FILE_BACKUP_INTERVAL)
-        },
         logging: {
             fileSystemLoggingEnabled: process.env.FILE_SYSTEM_LOGGING_ENABLED === "1",
             fileSystemLoggingDirectories: {

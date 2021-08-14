@@ -1,42 +1,10 @@
 require('dotenv').config();
 
 // Creating config object
-const config = Object.freeze({
-    bot: {
-        commandCharacter: process.env.BOT_COMMAND_CHARACTER,
-        githubRepo: process.env.BOT_GITHUB_REPO,
-        websiteUrl: process.env.BOT_WEBSITE_URL
-    },
-    files: {
-        backupInterval: parseInt(process.env.FILE_BACKUP_INTERVAL)
-    },
-    logging: {
-        fileSystemLoggingEnabled: process.env.FILE_SYSTEM_LOGGING_ENABLED === "1",
-        fileSystemLoggingDirectories: {
-            errors: process.env.FILE_SYSTEM_LOGGING_ERROR_DIR,
-            logs: process.env.FILE_SYSTEM_LOGGING_LOG_DIR,
-        }
-    },
-    webserver: {
-        port: parseInt(process.env.WEB_SERVER_PORT)
-    },
-    reactions: {
-        initialReactChance: parseFloat(process.env.REACTION_INITIAL_CHANCE),
-        multiReactChance: parseFloat(process.env.REACTION_MULTI_CHANCE),
-        guildEmojiChance: parseFloat(process.env.REACTION_GUILD_EMOJI_CHANCE)
-    },
-    shitpost: {
-        initialShitpostChance: parseFloat(process.env.SHITPOST_INITIAL_CHANCE),
-        atypicalFollowUpChance: parseFloat(process.env.SHITPOST_ATYPICAL_FOLLOWUP_CHANCE),
-        maxSentenceLength: parseInt(process.env.SHITPOST_MAX_SENTENCE_LENGTH),
-        maxSentenceCount: parseInt(process.env.SHITPOST_MAX_SENTENCE_COUNT),
-        randomSentenceTryInterval: parseInt(process.env.SHITPOST_RANDOM_SENTENCE_TRY_INTERVAL)
-    }
-});
+const { buildConfig } = require("./utilities/config");
+const config = buildConfig();
 
-const fs = require("fs");
-const path = require("path");
-
+// Set up app insights logging
 const appInsights = require('applicationinsights');
 let telemetryClient = null;
 if (process.env.APPINSIGHTS_INSTRUMENTATIONKEY) {
@@ -47,21 +15,21 @@ if (process.env.APPINSIGHTS_INSTRUMENTATIONKEY) {
     log("Boot", "Telemetry client initialised.");
 }
 
+const fs = require("fs");
+const path = require("path");
+
 const Discord = require("discord.js");
 const express = require('express');
 const EmojiList = require("emojis-list");
 const Handlebars = require("handlebars");
 
+const { readFile, writeFile } = require("./utilities/file");
+const { getDateString, getTimeString } = require("./utilities/datetime");
+
+const { getShitpostWordDictionary } = require("./actions/shitpost");
+
 // Shitpost data storage
-let wordDictionary = {
-    version: "1.0",
-    entries: {},
-    totalWordsProcessed: 0,
-    channels: {}
-};
-if (fs.existsSync("data/dictionary.json")) {
-    wordDictionary = JSON.parse(readFile("data/dictionary.json"));
-}
+const wordDictionary = getShitpostWordDictionary();
 
 // Load in bot commands
 const commands = loadCommands();
@@ -110,7 +78,7 @@ client.setInterval(() => {
     }
 }, config.files.backupInterval)
 
-// Reaction interval
+// Shitpost interval
 client.setInterval(() => {
     // Return early if no channels
     const channels = client.channels.cache.filter(() => true);
@@ -622,75 +590,6 @@ function error(error) {
         telemetryClient.trackException({
             exception: error
         })
-    }
-}
-
-// Gets the time for the TIME command.
-function getTimeString(delimeter = ":") {
-    var date = new Date();
-
-    var hours = date.getHours().toString();
-    if (hours.length < 2) {
-        hours = "0" + hours;
-    }
-
-    var mins = date.getMinutes().toString();
-    if (mins.length < 2) {
-        mins = "0" + mins;
-    }
-
-    var secs = date.getSeconds().toString();
-    if (secs.length < 2) {
-        secs = "0" + secs;
-    }
-
-    return hours + delimeter + mins + delimeter + secs;
-}
-
-// Gets the date for the date command.
-function getDateString(delimeter = "/", flip = false) {
-    var date = new Date();
-
-    var day = date.getDate().toString();
-    if (day.length < 2) {
-        day = "0" + day;
-    }
-
-    var month = (date.getMonth() + 1).toString();
-    if (month.length < 2) {
-        month = "0" + month;
-
-    }
-    var year = date.getFullYear().toString();
-
-    if (!flip) {
-        return day + delimeter + month + delimeter + year;
-    }
-    else {
-        return year + delimeter + month + delimeter + day;
-    }
-
-}
-
-// Loads in a file at the specified path.
-function readFile(path) {
-    return fs.readFileSync(path, "utf8");
-}
-
-// Writes a string to a file specified by path.
-function writeFile(path, content, append = false) {
-    if (path.includes("/")) {
-        const dirPath = path.substring(0, path.lastIndexOf("/"));
-        if (!fs.existsSync(dirPath)) {
-            fs.mkdirSync(dirPath);
-        }
-    }
-
-    if (append) {
-        fs.appendFileSync(path, content);
-    }
-    else {
-        fs.writeFileSync(path, content);
     }
 }
 

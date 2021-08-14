@@ -9,10 +9,12 @@
     "dotenv": "^8.2.0",
     "emojis-list": "^3.0.0",
     "express": "^4.17.1",
-    "handlebars": "^4.7.7"
+    "handlebars": "^4.7.7",
+    "jest": "^27.0.6"
   },
   "scripts": {
-    "run": "npm core/main.js"
+    "run": "npm core/main.js",
+    "test": "jest"
   },
   "repository": {
     "type": "git",

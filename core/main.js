@@ -1,9 +1,8 @@
 require('dotenv').config();
 
+// DO NOT MOVE, WILL BREAK ON AZURE
 const { readFile, writeFile } = require("./utilities/file");
 const { getDateString, getTimeString } = require("./utilities/datetime");
-
-// writeFile("./error/launchLog" + getDateString().replace("/", "").replace("/", "").replace("/", "").replace("/", "") + ".txt", "launched");
 
 // Creating config object
 const { buildConfig } = require("./utilities/config");

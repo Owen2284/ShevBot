@@ -3,7 +3,7 @@ require('dotenv').config();
 const { readFile, writeFile } = require("./utilities/file");
 const { getDateString, getTimeString } = require("./utilities/datetime");
 
-writeFile("./error/launchLog" + getDateString().replace("/", "").replace("/", "").replace("/", "").replace("/", "") + ".txt", "launched");
+// writeFile("./error/launchLog" + getDateString().replace("/", "").replace("/", "").replace("/", "").replace("/", "") + ".txt", "launched");
 
 // Creating config object
 const { buildConfig } = require("./utilities/config");

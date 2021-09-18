@@ -1,8 +1,17 @@
 require('dotenv').config();
 
+const { readFile, writeFile } = require("./utilities/file");
+const { getDateString, getTimeString } = require("./utilities/datetime");
+
+const debugFileName = getDateString().replace("/", "-").replace("/", "-").replace("/", "-").replace("/", "-");
+
+writeFile(`./errors/launch${debugFileName}Initial.txt`, "test");
+
 // Creating config object
 const { buildConfig } = require("./utilities/config");
 const config = buildConfig();
+
+writeFile(`./errors/launch${debugFileName}AfterConfig.txt`, "test");
 
 // Set up app insights logging
 const appInsights = require('applicationinsights');
@@ -15,6 +24,8 @@ if (process.env.APPINSIGHTS_INSTRUMENTATIONKEY) {
     log("Boot", "Telemetry client initialised.");
 }
 
+writeFile(`./errors/launch${debugFileName}AppInsights.txt`, "test");
+
 const fs = require("fs");
 const path = require("path");
 
@@ -23,13 +34,14 @@ const express = require('express');
 const EmojiList = require("emojis-list");
 const Handlebars = require("handlebars");
 
-const { readFile, writeFile } = require("./utilities/file");
-const { getDateString, getTimeString } = require("./utilities/datetime");
+writeFile(`./errors/launch${debugFileName}Requires.txt`, "test");
 
 const {
     getShitpostWordDictionary,
     generateShitpostMessage
 } = require("./actions/shitpost");
+
+writeFile(`./errors/launch${debugFileName}Imports.txt`, "test");
 
 // Load in bot commands
 const commands = loadCommands();
@@ -40,6 +52,8 @@ const client = new Discord.Client();
 // Mount additional details onto client
 client.config = config;
 client.commands = commands;
+
+writeFile(`./errors/launch${debugFileName}Bot.txt`, "test");
 
 // Set up bot event handlers
 client.on("message", message => {
@@ -65,6 +79,8 @@ client.on("message", message => {
         }
     }
 });
+
+writeFile(`./errors/launch${debugFileName}Ons.txt`, "test");
 
 // Shitpost interval
 client.setInterval(() => {
@@ -96,6 +112,8 @@ client.setInterval(() => {
     shitpostProtocol(targetChannel);
 
 }, config.shitpost.randomSentenceTryInterval);
+
+writeFile(`./errors/launch${debugFileName}Intervals.txt`, "test");
 
 function commandProtocol(channel, content, message) {
     try {
@@ -303,6 +321,8 @@ try {
     process.exit(1);
 }
 
+writeFile(`./errors/launch${debugFileName}Login.txt`, "test");
+
 // Spin up a web server to keep live checks happy for now.
 try {
     const app = express();
@@ -358,3 +378,5 @@ catch (e) {
     client.destroy();
     process.exit(1);
 }
+
+writeFile(`./errors/launch${debugFileName}Site.txt`, "test");

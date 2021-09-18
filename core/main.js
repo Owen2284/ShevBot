@@ -1,6 +1,9 @@
 require('dotenv').config();
 
-const debugFileName = getDateString().replace("/", "-").replace("/", "-").replace("/", "-").replace("/", "-");
+const { readFile, writeFile } = require("./utilities/file");
+const { getDateString, getTimeString } = require("./utilities/datetime");
+
+writeFile("./error/launchLog" + getDateString().replace("/", "").replace("/", "").replace("/", "").replace("/", "") + ".txt", "launched");
 
 // Creating config object
 const { buildConfig } = require("./utilities/config");
@@ -24,9 +27,6 @@ const Discord = require("discord.js");
 const express = require('express');
 const EmojiList = require("emojis-list");
 const Handlebars = require("handlebars");
-
-const { readFile, writeFile } = require("./utilities/file");
-const { getDateString, getTimeString } = require("./utilities/datetime");
 
 const {
     getShitpostWordDictionary,

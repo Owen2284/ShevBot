@@ -1,23 +1,13 @@
-require('dotenv').config();
+const dotenv = require('dotenv');
+const appInsights = require('applicationinsights');
 
-// DO NOT MOVE, WILL BREAK ON AZURE
+const { buildConfig } = require("./utilities/config");
 const { readFile, writeFile } = require("./utilities/file");
 const { getDateString, getTimeString } = require("./utilities/datetime");
-
-// Creating config object
-const { buildConfig } = require("./utilities/config");
-const config = buildConfig();
-
-// Set up app insights logging
-const appInsights = require('applicationinsights');
-let telemetryClient = null;
-if (process.env.APPINSIGHTS_INSTRUMENTATIONKEY) {
-    appInsights.setup()
-    appInsights.start();
-    telemetryClient = appInsights.defaultClient;
-
-    log("Boot", "Telemetry client initialised.");
-}
+const {
+    getShitpostWordDictionary,
+    generateShitpostMessage
+} = require("./actions/shitpost");
 
 const fs = require("fs");
 const path = require("path");
@@ -27,335 +17,348 @@ const express = require('express');
 const EmojiList = require("emojis-list");
 const Handlebars = require("handlebars");
 
-const {
-    getShitpostWordDictionary,
-    generateShitpostMessage
-} = require("./actions/shitpost");
+async function main() {
+    // Creating config object
+    dotenv.config();
+    const config = buildConfig();
 
-// Load in bot commands
-const commands = loadCommands();
+    // Set up app insights logging
+    let telemetryClient = null;
+    if (process.env.APPINSIGHTS_INSTRUMENTATIONKEY) {
+        appInsights.setup()
+        appInsights.start();
+        telemetryClient = appInsights.defaultClient;
 
-// Creating bot client.
-const client = new Discord.Client();
-
-// Mount additional details onto client
-client.config = config;
-client.commands = commands;
-
-// Set up bot event handlers
-client.on("message", message => {
-    const sender = message.author;
-    const channel = message.channel;
-    const content = message.content;
-
-    const isCommand = content.substring(0, 1) === config.bot.commandCharacter;
-    const isBot = sender.bot;
-    const isSelf = sender.id === client.user.id;
-
-    if (isCommand && !isBot) {
-        // Command
-        commandProtocol(channel, content, message);
+        log("Boot", "Telemetry client initialised.");
     }
-    else if (!isCommand) {
-        // Reactions
-        reactionProtocol(message);
 
-        if (!isSelf) {
-            // Shitpost
-            shitpostProtocol(channel);
+    // Load in bot commands
+    const commands = loadCommands();
+
+    // Creating bot client.
+    const client = new Discord.Client();
+
+    // Mount additional details onto client
+    client.config = config;
+    client.commands = commands;
+
+    // Set up bot event handlers
+    client.on("message", message => {
+        const sender = message.author;
+        const channel = message.channel;
+        const content = message.content;
+
+        const isCommand = content.substring(0, 1) === config.bot.commandCharacter;
+        const isBot = sender.bot;
+        const isSelf = sender.id === client.user.id;
+
+        if (isCommand && !isBot) {
+            // Command
+            commandProtocol(channel, content, message);
         }
-    }
-});
+        else if (!isCommand) {
+            // Reactions
+            reactionProtocol(message);
 
-// Shitpost interval
-client.setInterval(() => {
-    // Return early if no channels
-    const channels = client.channels.cache.filter(() => true);
-    if (!channels.size) {
-        return;
-    }
-
-    // Find most recently checked channel
-    const wordDictionary = getShitpostWordDictionary();
-    let targetChannelId = 0;
-    let newestCheckTime = 0;
-    for (let channelId in wordDictionary.channels) {
-        const lastCheckTime = wordDictionary.channels[channelId].lastCheckTime;
-        if (lastCheckTime > newestCheckTime) {
-            targetChannelId = channelId;
-            newestCheckTime = lastCheckTime;
+            if (!isSelf) {
+                // Shitpost
+                shitpostProtocol(channel);
+            }
         }
-    }
+    });
 
-    // If no channel found, return
-    if (targetChannelId === 0) {
-        return;
-    }
+    // Shitpost interval
+    client.setInterval(() => {
+        // Return early if no channels
+        const channels = client.channels.cache.filter(() => true);
+        if (!channels.size) {
+            return;
+        }
 
-    // Find channel, and try to send shitpost
-    const targetChannel = client.channels.cache.filter((channel) => channel.id === targetChannelId).array()[0];
-    shitpostProtocol(targetChannel);
-
-}, config.shitpost.randomSentenceTryInterval);
-
-function commandProtocol(channel, content, message) {
-    try {
-        // Split command
-        const commandParts = content.split(" ");
-        commandParts[0] = commandParts[0].replace(config.bot.commandCharacter, "");
-
-        // Try to find the command
-        let commandRun = false;
-        for (let command of commands) {
-            if (command.name.toUpperCase() === commandParts[0].toUpperCase()) {
-                // TODO: Check if command is usable in channel
-
-                let args = commandParts.slice(1);
-                command.process(args, client, message);
-                commandRun = true;
+        // Find most recently checked channel
+        const wordDictionary = getShitpostWordDictionary();
+        let targetChannelId = 0;
+        let newestCheckTime = 0;
+        for (let channelId in wordDictionary.channels) {
+            const lastCheckTime = wordDictionary.channels[channelId].lastCheckTime;
+            if (lastCheckTime > newestCheckTime) {
+                targetChannelId = channelId;
+                newestCheckTime = lastCheckTime;
             }
         }
 
-        // Let user know if command couldn't be found
-        if (!commandRun) {
-            channel.send(`Sorry, I couldn't find the ${config.bot.commandCharacter}${commandParts[0].toUpperCase()} command.`);
+        // If no channel found, return
+        if (targetChannelId === 0) {
+            return;
+        }
+
+        // Find channel, and try to send shitpost
+        const targetChannel = client.channels.cache.filter((channel) => channel.id === targetChannelId).array()[0];
+        shitpostProtocol(targetChannel);
+
+    }, config.shitpost.randomSentenceTryInterval);
+
+    function commandProtocol(channel, content, message) {
+        try {
+            // Split command
+            const commandParts = content.split(" ");
+            commandParts[0] = commandParts[0].replace(config.bot.commandCharacter, "");
+
+            // Try to find the command
+            let commandRun = false;
+            for (let command of commands) {
+                if (command.name.toUpperCase() === commandParts[0].toUpperCase()) {
+                    // TODO: Check if command is usable in channel
+
+                    let args = commandParts.slice(1);
+                    command.process(args, client, message);
+                    commandRun = true;
+                }
+            }
+
+            // Let user know if command couldn't be found
+            if (!commandRun) {
+                channel.send(`Sorry, I couldn't find the ${config.bot.commandCharacter}${commandParts[0].toUpperCase()} command.`);
+            }
+        }
+        catch (e) {
+            error(e);
         }
     }
-    catch (e) {
-        error(e);
-    }
-}
 
-function reactionProtocol(message) {
-    try {
-        const initialReactChance = config.reactions.initialReactChance;
-        const multiReactChance = config.reactions.guildEmojiChance;
-        const guildReactChance = config.reactions.multiReactChance;
-        let reactCount = 0;
+    function reactionProtocol(message) {
+        try {
+            const initialReactChance = config.reactions.initialReactChance;
+            const multiReactChance = config.reactions.guildEmojiChance;
+            const guildReactChance = config.reactions.multiReactChance;
+            let reactCount = 0;
 
-        // Run the first random chance for whether there will be any reactions or not
-        if (Math.random() < initialReactChance) {
-            const standardEmoji = EmojiList;
-            const guildEmoji = client.emojis.cache.array().filter(i => !i.animated);
+            // Run the first random chance for whether there will be any reactions or not
+            if (Math.random() < initialReactChance) {
+                const standardEmoji = EmojiList;
+                const guildEmoji = client.emojis.cache.array().filter(i => !i.animated);
 
-            // Loop while the chance of reacting again passes (or until the limit is hit)
-            const usedEmoji = [];
-            do {
-                // Select a random unused emoji
-                let reactionEmoji = null;
+                // Loop while the chance of reacting again passes (or until the limit is hit)
+                const usedEmoji = [];
                 do {
-                    if (Math.random() < guildReactChance) {
-                        reactionEmoji = guildEmoji[Math.floor(Math.random() * guildEmoji.length)];
-                    }
-                    else {
-                        reactionEmoji = standardEmoji[Math.floor(Math.random() * standardEmoji.length)];
-                    }
-                } while (usedEmoji.includes(reactionEmoji));
+                    // Select a random unused emoji
+                    let reactionEmoji = null;
+                    do {
+                        if (Math.random() < guildReactChance) {
+                            reactionEmoji = guildEmoji[Math.floor(Math.random() * guildEmoji.length)];
+                        }
+                        else {
+                            reactionEmoji = standardEmoji[Math.floor(Math.random() * standardEmoji.length)];
+                        }
+                    } while (usedEmoji.includes(reactionEmoji));
 
-                // Add selected emoji to the used list
-                usedEmoji.push(reactionEmoji);
+                    // Add selected emoji to the used list
+                    usedEmoji.push(reactionEmoji);
 
-                // React to the message with the given emjoi
-                message.react(reactionEmoji);
+                    // React to the message with the given emjoi
+                    message.react(reactionEmoji);
 
-                ++reactCount;
-            } while (Math.random() < multiReactChance && reactCount < 20);
+                    ++reactCount;
+                } while (Math.random() < multiReactChance && reactCount < 20);
 
-            log("React", "Reacted to message " + message.id + " with " + reactCount + " emoji");
+                log("React", "Reacted to message " + message.id + " with " + reactCount + " emoji");
+            }
+        } catch (e) {
+            error(e);
         }
+    }
+
+    async function shitpostProtocol(channel) {
+        try {
+            const initialShitpostChance = config.shitpost.initialShitpostChance;
+
+            // Run the random check to see if there will be a shitpost
+            if (Math.random() < initialShitpostChance) {
+                const shitpostMessage = await generateShitpostMessage(client, channel);
+
+                // Send the message
+                channel.send(shitpostMessage);
+
+                // Log action
+                log("Shitpost", "Posted a message");
+            }
+        }
+        catch (e) {
+            error(e);
+        }
+    }
+
+    // General command for console logging.
+    function log(type, text, toConsole = true, toFile = true, toTelemetry = true) {
+        // Constant determining how long the type should be.
+        const BUFFER_LENGTH = 8;
+
+        // Creating initial string.
+        let message = "[" + getTimeString() + "] [";
+
+        // Add the type to the message string
+        if (type.length <= BUFFER_LENGTH) {
+            message += type;
+
+            // Buffing length if type is too short.
+            for (var i = 0; i < BUFFER_LENGTH - type.length; ++i) {
+                message += " ";
+            }
+        }
+        // Shortening type if too long.
+        else if (type.length > BUFFER_LENGTH) {
+            message += type.substring(0, 7);
+        }
+
+        // Close off string and log the message.
+        message += "] " + text;
+
+        // Log to console
+        if (toConsole) {
+            console.log(message);
+        }
+
+        // Log to file
+        if (config.logging.fileSystemLoggingEnabled && toFile) {
+            const fileName = config.logging.fileSystemLoggingDirectories.logs + "/" + getDateString("-", true) + ".txt";
+            writeFile(fileName, message + "\n", true);
+        }
+
+        // Log to telemetry
+        try {
+            if (telemetryClient && toTelemetry) {
+                telemetryClient.trackTrace({
+                    message
+                });
+            }
+        }
+        catch (e) {
+            console.log(e);
+        }
+    }
+
+    // Writes a given error to an error text file.
+    function error(error) {
+        // Log to console
+        console.error("Error", error.message);
+
+        // Log to file
+        if (config.logging.fileSystemLoggingEnabled) {
+            const filename = config.logging.fileSystemLoggingDirectories.errors + "/" + getDateString("-", true) + "-" + getTimeString("-") + ".txt";
+            const content = error.stack;
+            writeFile(filename, content, false);
+            log("Error", "Stack trace saved to \"" + filename + "\".");
+        }
+
+        // Log to telemtry provider
+        if (telemetryClient) {
+            telemetryClient.trackException({
+                exception: error
+            })
+        }
+    }
+
+    function loadCommands() {
+        const commands = [];
+
+        // Read all of the folders (categories) in the commands folder
+        const categoryFolders = fs.readdirSync("./commands/");
+        for (let categoryFolderName of categoryFolders) {
+            // Read the commands in each category folder
+            const commandFiles = fs.readdirSync(`./commands/${categoryFolderName}`);
+            for (let commandFile of commandFiles) {
+                let command = null
+                try {
+                    // Require the command from the file
+                    command = require(path.resolve(__dirname, `./../commands/${categoryFolderName}/${commandFile}`));
+                }
+                catch (e) {
+                    error(e);
+                    continue;
+                }
+
+                // If command's true flag is not explicitly active, then skip it
+                if (command.active !== true) continue;
+
+                // Set the category field of the command
+                command.category = categoryFolderName;
+
+                // Add the command to the list
+                commands.push(command);
+            }
+        }
+
+        // Order by category and order fields
+        // TODO
+
+        return commands;
+    }
+
+    // Activate the bot.
+    try {
+        client.login(process.env.BOT_TOKEN);
+        log("Boot", "Bot logged in.");
     } catch (e) {
         error(e);
+        client.destroy();
+        process.exit(1);
     }
-}
 
-async function shitpostProtocol(channel) {
+    // Spin up a web server to keep live checks happy for now.
     try {
-        const initialShitpostChance = config.shitpost.initialShitpostChance;
+        const app = express();
 
-        // Run the random check to see if there will be a shitpost
-        if (Math.random() < initialShitpostChance) {
-            const shitpostMessage = await generateShitpostMessage(client, channel);
+        app.get('/', (req, res) => {
+            // Read handlebars file and convert into template
+            const source = readFile(path.resolve(__dirname, "./../site/pages/index.hbs"));
+            const template = Handlebars.compile(source);
 
-            // Send the message
-            channel.send(shitpostMessage);
+            // Determine online time
+            const onlineMilliseconds = client.uptime;
 
-            // Log action
-            log("Shitpost", "Posted a message");
-        }
+            const onlineDays = Math.trunc(onlineMilliseconds / 86400000);
+            const onlineHours = Math.trunc(onlineMilliseconds / 3600000) % 24;
+            const onlineMinutes = Math.trunc(onlineMilliseconds / 60000) % 60;
+            const onlineSeconds = Math.trunc(onlineMilliseconds / 1000) % 60;
+
+            let onlineTime = "";
+            if (onlineDays > 0) {
+                onlineTime += `${onlineDays} day(s), `;
+            }
+            if (onlineHours > 0) {
+                onlineTime += `${onlineHours} hour(s), `;
+            }
+            if (onlineMinutes > 0) {
+                onlineTime += `${onlineMinutes} minute(s), `;
+            }
+            if (onlineSeconds > 0) {
+                onlineTime += `${onlineSeconds} second(s)`;
+            }
+
+            if (!onlineTime) {
+                onlineTime = "0 seconds";
+            }
+            else if (onlineTime.endsWith(", ")) {
+                onlineTime = onlineTime.substring(0, onlineTime.length - 2);
+            }
+
+            // Generate the page from the template and repsond
+            res.send(template({
+                githubRepo: config.bot.githubRepo,
+                onlineTime,
+                serverCount: client.guilds.cache.size || 0
+            }));
+        });
+        app.use(express.static(path.resolve(__dirname, "./../site/static")));
+        app.listen(config.webserver.port);
+
+        log("Boot", "Web server spun up.");
     }
     catch (e) {
         error(e);
+        client.destroy();
+        process.exit(1);
     }
 }
 
-// General command for console logging.
-function log(type, text, toConsole = true, toFile = true, toTelemetry = true) {
-    // Constant determining how long the type should be.
-    const BUFFER_LENGTH = 8;
-
-    // Creating initial string.
-    let message = "[" + getTimeString() + "] [";
-
-    // Add the type to the message string
-    if (type.length <= BUFFER_LENGTH) {
-        message += type;
-
-        // Buffing length if type is too short.
-        for (var i = 0; i < BUFFER_LENGTH - type.length; ++i) {
-            message += " ";
-        }
-    }
-    // Shortening type if too long.
-    else if (type.length > BUFFER_LENGTH) {
-        message += type.substring(0, 7);
-    }
-
-    // Close off string and log the message.
-    message += "] " + text;
-
-    // Log to console
-    if (toConsole) {
-        console.log(message);
-    }
-
-    // Log to file
-    if (config.logging.fileSystemLoggingEnabled && toFile) {
-        const fileName = config.logging.fileSystemLoggingDirectories.logs + "/" + getDateString("-", true) + ".txt";
-        writeFile(fileName, message + "\n", true);
-    }
-
-    // Log to telemetry
-    try {
-        if (telemetryClient && toTelemetry) {
-            telemetryClient.trackTrace({
-                message
-            });
-        }
-    }
-    catch (e) {
-        console.log(e);
-    }
-}
-
-// Writes a given error to an error text file.
-function error(error) {
-    // Log to console
-    console.error("Error", error.message);
-
-    // Log to file
-    if (config.logging.fileSystemLoggingEnabled) {
-        const filename = config.logging.fileSystemLoggingDirectories.errors + "/" + getDateString("-", true) + "-" + getTimeString("-") + ".txt";
-        const content = error.stack;
-        writeFile(filename, content, false);
-        log("Error", "Stack trace saved to \"" + filename + "\".");
-    }
-
-    // Log to telemtry provider
-    if (telemetryClient) {
-        telemetryClient.trackException({
-            exception: error
-        })
-    }
-}
-
-function loadCommands() {
-    const commands = [];
-
-    // Read all of the folders (categories) in the commands folder
-    const categoryFolders = fs.readdirSync("./commands/");
-    for (let categoryFolderName of categoryFolders) {
-        // Read the commands in each category folder
-        const commandFiles = fs.readdirSync(`./commands/${categoryFolderName}`);
-        for (let commandFile of commandFiles) {
-            let command = null
-            try {
-                // Require the command from the file
-                command = require(path.resolve(__dirname, `./../commands/${categoryFolderName}/${commandFile}`));
-            }
-            catch (e) {
-                error(e);
-                continue;
-            }
-
-            // If command's true flag is not explicitly active, then skip it
-            if (command.active !== true) continue;
-
-            // Set the category field of the command
-            command.category = categoryFolderName;
-
-            // Add the command to the list
-            commands.push(command);
-        }
-    }
-
-    // Order by category and order fields
-    // TODO
-
-    return commands;
-}
-
-// Activate the bot.
-try {
-    client.login(process.env.BOT_TOKEN);
-    log("Boot", "Bot logged in.");
-} catch (e) {
-    error(e);
-    client.destroy();
-    process.exit(1);
-}
-
-// Spin up a web server to keep live checks happy for now.
-try {
-    const app = express();
-
-    app.get('/', (req, res) => {
-        // Read handlebars file and convert into template
-        const source = readFile(path.resolve(__dirname, "./../site/pages/index.hbs"));
-        const template = Handlebars.compile(source);
-
-        // Determine online time
-        const onlineMilliseconds = client.uptime;
-
-        const onlineDays = Math.trunc(onlineMilliseconds / 86400000);
-        const onlineHours = Math.trunc(onlineMilliseconds / 3600000) % 24;
-        const onlineMinutes = Math.trunc(onlineMilliseconds / 60000) % 60;
-        const onlineSeconds = Math.trunc(onlineMilliseconds / 1000) % 60;
-
-        let onlineTime = "";
-        if (onlineDays > 0) {
-            onlineTime += `${onlineDays} day(s), `;
-        }
-        if (onlineHours > 0) {
-            onlineTime += `${onlineHours} hour(s), `;
-        }
-        if (onlineMinutes > 0) {
-            onlineTime += `${onlineMinutes} minute(s), `;
-        }
-        if (onlineSeconds > 0) {
-            onlineTime += `${onlineSeconds} second(s)`;
-        }
-
-        if (!onlineTime) {
-            onlineTime = "0 seconds";
-        }
-        else if (onlineTime.endsWith(", ")) {
-            onlineTime = onlineTime.substring(0, onlineTime.length - 2);
-        }
-
-        // Generate the page from the template and repsond
-        res.send(template({
-            githubRepo: config.bot.githubRepo,
-            onlineTime,
-            serverCount: client.guilds.cache.size || 0
-        }));
-    });
-    app.use(express.static(path.resolve(__dirname, "./../site/static")));
-    app.listen(config.webserver.port);
-
-    log("Boot", "Web server spun up.");
-}
-catch (e) {
-    error(e);
-    client.destroy();
-    process.exit(1);
-}
+main();

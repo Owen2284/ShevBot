@@ -1,25 +1,25 @@
-const fs = require("fs");
-const { readFile, writeFile } = require("./../utilities/file");
+const { readBlobFile, writeBlobFile } = require("./../utilities/blob");
 
-function getShitpostWordDictionary() {
-    // Shitpost data storage
-    let wordDictionary = {
-        version: "1.0",
-        entries: {},
-        totalWordsProcessed: 0,
-        channels: {}
-    };
-    if (fs.existsSync("data/dictionary.json")) {
-        wordDictionary = JSON.parse(readFile("data/dictionary.json"));
-    }
+// Example empty dictionary
+// {
+//     version: "1.0",
+//     entries: {},
+//     totalWordsProcessed: 0,
+//     channels: {}
+// }
+
+async function getShitpostWordDictionary() {
+    // Get dictionary from blob
+    wordDictionary = JSON.parse(await readBlobFile("dictionary.json"));
 
     return wordDictionary;
 }
 
-function saveShitpostWordDictionary(wordDictionary) {
+async function saveShitpostWordDictionary(wordDictionary) {
     // Save the dictionary to a file
     try {
-        writeFile("data/dictionary.json", JSON.stringify(wordDictionary));
+        const success = await writeBlobFile("dictionary.json", JSON.stringify(wordDictionary));
+        if (!success) throw "writeBlobFile returned useuccessful status";
     }
     catch (e) {
         error(e);
@@ -181,9 +181,9 @@ function addMessageToShitpostWordDictionary(wordDictionary, messageWordChain) {
     return wordDictionary;
 }
 
-function updateShitpostDictionary(channelId, messageBatch) {
+async function updateShitpostDictionary(channelId, messageBatch) {
     // Read word dictionary from file
-    let wordDictionary = getShitpostWordDictionary();
+    let wordDictionary = await getShitpostWordDictionary();
 
     if (!wordDictionary.channels[channelId]) {
         wordDictionary.channels[channelId] = {
@@ -221,12 +221,16 @@ function updateShitpostDictionary(channelId, messageBatch) {
     }
 
     // Save word dictionary
-    saveShitpostWordDictionary(wordDictionary);
+    await saveShitpostWordDictionary(wordDictionary);
+
+    return wordDictionary;
 }
 
-function createWeightedShitpostDictionary() {
-    // Read word dictionary from file
-    const wordDictionary = getShitpostWordDictionary();
+async function createWeightedShitpostDictionary(wordDictionary) {
+    // Read word dictionary from blob if missing
+    if (!wordDictionary) {
+        wordDictionary = await getShitpostWordDictionary();
+    }
 
     const weightedDictionary = [];
 
@@ -401,10 +405,10 @@ async function generateShitpostMessage(client, channel) {
     const previousMessages = await channel.messages.fetch({ limit: 100 });
 
     // Update the dictionary with this batch of messages
-    updateShitpostDictionary(channel.id, previousMessages);
+    const wordDictionary = await updateShitpostDictionary(channel.id, previousMessages);
 
     // Get a version of the dictionary with correctly weighted chances
-    const weightedDictionary = createWeightedShitpostDictionary();
+    const weightedDictionary = await createWeightedShitpostDictionary(wordDictionary);
 
     // Determine the number of sentences to write
     const sentenceCount = (Math.random() * client.config.shitpost.maxSentenceCount) + 1;

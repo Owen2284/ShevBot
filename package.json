@@ -4,6 +4,7 @@
   "description": "Discord bot by Owen Shevlin",
   "main": "core/main.js",
   "dependencies": {
+    "@azure/storage-blob": "^12.8.0",
     "applicationinsights": "^1.8.10",
     "discord.js": "^12.5.1",
     "dotenv": "^8.2.0",

@@ -1,6 +1,9 @@
 const { randomBetween } = require("./../utilities/random");
 const { readBlobFile, writeBlobFile, getListOfFiles, getFileUrl } = require("./../utilities/blob");
 
+const path = require('path');
+const axios = require('axios');
+
 // Example empty dictionary
 // {
 //     version: "1.0",
@@ -431,8 +434,8 @@ async function generateShitpostTextMessage(client, channel) {
 async function updateReactionImageLibrary(client, messageBatch) {
     // Run through the message batch
     for (let [_, message] of messageBatch) {
-        // Ignore message if it doesn't have attachments, or if it was written by a bot
-        if (!message.attachments || !message.attachments.length || message.author.bot) {
+        // Ignore message if written by a bot
+        if (message.author.bot) {
             continue;
         }
 
@@ -441,23 +444,48 @@ async function updateReactionImageLibrary(client, messageBatch) {
             continue;
         }
 
-        // Get first image file from message
-        const attachmentToSave = message.attachments[0]
+        // Handle attachments if they are present
+        if (message.attachments && message.attachments.size) {
+            // Get first image file from message
+            const attachmentToSave = message.attachments.values().next().value
 
-        // If image is spoilered, ignore it
-        if (attachmentToSave.spoiler) {
-            continue;
+            // If image is spoilered, ignore it
+            if (attachmentToSave.spoiler) {
+                continue;
+            }
+
+            const { name, url } = attachmentToSave;
+            const extension = path.extname(name).replace(".", "");
+
+            // Check it's an allowed image
+            if (client.config.shitpost.allowedImageFileTypes.indexOf(extension) === -1) {
+                continue;
+            }
+
+            // Get file from Discord URL
+            const response = await axios.get(url, {
+                responseType: 'arraybuffer'
+            });
+            const { status, data } = response;
+
+            if (status !== 200) {
+                continue;
+            }
+
+            // Upload to blob storage
+            const root = client.config.shitpost.reactionImagePath;
+            const success = await writeBlobFile(`${root.endsWith("/") ? root : `${root}/`}saved/${message.id}_${name}`, data);
+            if (!success) throw "writeBlobFile returned useuccessful status";
+
+            // TODO: Logs
         }
+        // Handle embeds if they are present
+        else if (message.embeds && message.embeds.length) {
+            // Get first image file from message
+            const embedToSave = message.embeds[0];
 
-        const url = attachmentToSave.url;
-
-        // Check it's an allowed image
-        if (client.config.shitpost.allowedImageFileTypes.contains(url)) {
-            continue;
+            // TODO: Check if Tenor, and if so, scrape gif off of page
         }
-
-        // Upload to blob storage
-        // TODO
     }
 }
 
@@ -473,7 +501,7 @@ async function selectRandomReactionImageUrl(client) {
 async function generateShitpostImageMessage(client, channel) {
     // Loop through recently posted images, and update library
     const previousMessages = await channel.messages.fetch({ limit: 100 });
-    updateReactionImageLibrary(client, previousMessages);
+    await updateReactionImageLibrary(client, previousMessages);
 
     // Select a random image from blob storage
     const url = await selectRandomReactionImageUrl(client);

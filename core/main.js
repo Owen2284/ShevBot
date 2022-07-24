@@ -17,6 +17,7 @@ const Discord = require("discord.js");
 const express = require('express');
 const EmojiList = require("emojis-list");
 const Handlebars = require("handlebars");
+const { randomBetween } = require('./utilities/random');
 
 async function main() {
     // Creating config object
@@ -60,7 +61,7 @@ async function main() {
     client.commands = commands;
 
     // Set up bot event handlers
-    client.on("messageCreate", message => {
+    client.on("messageCreate", async (message) => {
         const sender = message.author;
         const channel = message.channel;
         const content = message.content;
@@ -75,13 +76,35 @@ async function main() {
         }
         else if (!isCommand) {
             // Reactions
-            reactionProtocol(message);
+            await reactionProtocol(message);
 
             if (!isSelf) {
                 // Shitpost
-                shitpostProtocol(channel);
+                await shitpostProtocol(channel);
             }
         }
+    });
+
+    client.on("messageReactionAdd", async (messageReaction, user) => {
+        // If already reacted with this emoji, then ignore
+        if (messageReaction.me) {
+            return;
+        }
+
+        // Check if it passed the reaction change check
+        if (Math.random() >= client.config.reactions.joinInReactChance) {
+            return;
+        }
+
+        const { message, emoji } = messageReaction;
+
+        // React to message
+        setTimeout(async () => {
+            await message.react(emoji);
+        }, randomBetween(500, 2000))
+
+        // Log react
+        log("React", "Reacted to message " + message.id + " with other reacted emoji");
     });
 
     // Shitpost interval
@@ -143,7 +166,7 @@ async function main() {
         }
     }
 
-    function reactionProtocol(message) {
+    async function reactionProtocol(message) {
         try {
             const initialReactChance = config.reactions.initialReactChance;
             const multiReactChance = config.reactions.guildEmojiChance;
@@ -173,7 +196,7 @@ async function main() {
                     usedEmoji.push(reactionEmoji);
 
                     // React to the message with the given emjoi
-                    message.react(reactionEmoji);
+                    await message.react(reactionEmoji);
 
                     ++reactCount;
                 } while (Math.random() < multiReactChance && reactCount < 20);

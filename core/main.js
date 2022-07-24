@@ -37,19 +37,35 @@ async function main() {
     const commands = loadCommands();
 
     // Creating bot client.
-    const client = new Discord.Client({ intents: [Discord.GatewayIntentBits.Guilds, Discord.GatewayIntentBits.DirectMessages] });
+    const client = new Discord.Client({
+        intents: [
+            Discord.GatewayIntentBits.Guilds,
+            Discord.GatewayIntentBits.GuildEmojisAndStickers,
+            Discord.GatewayIntentBits.GuildMembers,
+            Discord.GatewayIntentBits.GuildMessageReactions,
+            Discord.GatewayIntentBits.GuildMessages,
+            Discord.GatewayIntentBits.DirectMessages,
+            Discord.GatewayIntentBits.DirectMessageReactions,
+            Discord.GatewayIntentBits.MessageContent
+        ],
+        partials: [
+            Discord.Partials.Channel,
+            Discord.Partials.Message,
+            Discord.Partials.Reaction
+        ]
+    });
 
     // Mount additional details onto client
     client.config = config;
     client.commands = commands;
 
     // Set up bot event handlers
-    client.on("message", message => {
+    client.on("messageCreate", message => {
         const sender = message.author;
         const channel = message.channel;
         const content = message.content;
 
-        const isCommand = content.substring(0, 1) === config.bot.commandCharacter;
+        const isCommand = content && content.substring(0, 1) === config.bot.commandCharacter;
         const isBot = sender.bot;
         const isSelf = sender.id === client.user.id;
 
@@ -137,7 +153,7 @@ async function main() {
             // Run the first random chance for whether there will be any reactions or not
             if (Math.random() < initialReactChance) {
                 const standardEmoji = EmojiList;
-                const guildEmoji = client.emojis.cache.array().filter(i => !i.animated);
+                const guildEmoji = Array.from(client.emojis.cache.filter(i => !i.animated).values());
 
                 // Loop while the chance of reacting again passes (or until the limit is hit)
                 const usedEmoji = [];

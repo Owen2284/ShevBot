@@ -17,6 +17,7 @@ const Discord = require("discord.js");
 const express = require('express');
 const EmojiList = require("emojis-list");
 const Handlebars = require("handlebars");
+const { randomBetween } = require('./utilities/random');
 
 async function main() {
     // Creating config object
@@ -37,19 +38,35 @@ async function main() {
     const commands = loadCommands();
 
     // Creating bot client.
-    const client = new Discord.Client();
+    const client = new Discord.Client({
+        intents: [
+            Discord.GatewayIntentBits.Guilds,
+            Discord.GatewayIntentBits.GuildEmojisAndStickers,
+            Discord.GatewayIntentBits.GuildMembers,
+            Discord.GatewayIntentBits.GuildMessageReactions,
+            Discord.GatewayIntentBits.GuildMessages,
+            Discord.GatewayIntentBits.DirectMessages,
+            Discord.GatewayIntentBits.DirectMessageReactions,
+            Discord.GatewayIntentBits.MessageContent
+        ],
+        partials: [
+            Discord.Partials.Channel,
+            Discord.Partials.Message,
+            Discord.Partials.Reaction
+        ]
+    });
 
     // Mount additional details onto client
     client.config = config;
     client.commands = commands;
 
     // Set up bot event handlers
-    client.on("message", message => {
+    client.on("messageCreate", async (message) => {
         const sender = message.author;
         const channel = message.channel;
         const content = message.content;
 
-        const isCommand = content.substring(0, 1) === config.bot.commandCharacter;
+        const isCommand = content && content.substring(0, 1) === config.bot.commandCharacter;
         const isBot = sender.bot;
         const isSelf = sender.id === client.user.id;
 
@@ -59,17 +76,39 @@ async function main() {
         }
         else if (!isCommand) {
             // Reactions
-            reactionProtocol(message);
+            await reactionProtocol(message);
 
             if (!isSelf) {
                 // Shitpost
-                shitpostProtocol(channel);
+                await shitpostProtocol(channel);
             }
         }
     });
 
+    client.on("messageReactionAdd", async (messageReaction, user) => {
+        // If already reacted with this emoji, then ignore
+        if (messageReaction.me) {
+            return;
+        }
+
+        // Check if it passed the reaction change check
+        if (Math.random() >= client.config.reactions.joinInReactChance) {
+            return;
+        }
+
+        const { message, emoji } = messageReaction;
+
+        // React to message
+        setTimeout(async () => {
+            await message.react(emoji);
+        }, randomBetween(500, 2000))
+
+        // Log react
+        log("React", "Reacted to message " + message.id + " with other reacted emoji");
+    });
+
     // Shitpost interval
-    client.setInterval(() => {
+    setInterval(async () => {
         // Return early if no channels
         const channels = client.channels.cache.filter(() => true);
         if (!channels.size) {
@@ -77,7 +116,7 @@ async function main() {
         }
 
         // Find most recently checked channel
-        const wordDictionary = getShitpostWordDictionary();
+        const wordDictionary = await getShitpostWordDictionary();
         let targetChannelId = 0;
         let newestCheckTime = 0;
         for (let channelId in wordDictionary.channels) {
@@ -94,8 +133,8 @@ async function main() {
         }
 
         // Find channel, and try to send shitpost
-        const targetChannel = client.channels.cache.filter((channel) => channel.id === targetChannelId).array()[0];
-        shitpostProtocol(targetChannel);
+        const targetChannel = client.channels.cache.filter((channel) => channel.id === targetChannelId).first();
+        await shitpostProtocol(targetChannel, true, false);
 
     }, config.shitpost.randomSentenceTryInterval);
 
@@ -127,7 +166,7 @@ async function main() {
         }
     }
 
-    function reactionProtocol(message) {
+    async function reactionProtocol(message) {
         try {
             const initialReactChance = config.reactions.initialReactChance;
             const multiReactChance = config.reactions.guildEmojiChance;
@@ -137,7 +176,7 @@ async function main() {
             // Run the first random chance for whether there will be any reactions or not
             if (Math.random() < initialReactChance) {
                 const standardEmoji = EmojiList;
-                const guildEmoji = client.emojis.cache.array().filter(i => !i.animated);
+                const guildEmoji = Array.from(client.emojis.cache.filter(i => !i.animated).values());
 
                 // Loop while the chance of reacting again passes (or until the limit is hit)
                 const usedEmoji = [];
@@ -157,7 +196,7 @@ async function main() {
                     usedEmoji.push(reactionEmoji);
 
                     // React to the message with the given emjoi
-                    message.react(reactionEmoji);
+                    await message.react(reactionEmoji);
 
                     ++reactCount;
                 } while (Math.random() < multiReactChance && reactCount < 20);
@@ -169,14 +208,18 @@ async function main() {
         }
     }
 
-    async function shitpostProtocol(channel) {
+    async function shitpostProtocol(channel, allowText = true, allowImages = true) {
+        if (!allowText && !allowImages) {
+            return;
+        }
+
         try {
             const initialShitpostChance = config.shitpost.initialShitpostChance;
             const textToImageRatio = config.shitpost.textToImageRatio;
 
             // Run the random check to see if there will be a shitpost
             if (Math.random() < initialShitpostChance) {
-                if (Math.random() < textToImageRatio) {
+                const postText = async () => {
                     // Generate thet text message
                     const shitpostMessage = await generateShitpostTextMessage(client, channel);
 
@@ -186,7 +229,8 @@ async function main() {
                     // Log action
                     log("Shitpost", "Posted a message");
                 }
-                else {
+
+                const postImage = async () => {
                     // Generate the image path
                     const shitpostImageUrl = await generateShitpostImageMessage(client, channel);
 
@@ -199,6 +243,21 @@ async function main() {
 
                     // Log action
                     log("Shitpost", "Posted an image");
+                }
+
+                if (allowText && allowImages) {
+                    if (Math.random() < textToImageRatio) {
+                        await postText();
+                    }
+                    else {
+                        await postImage();
+                    }
+                }
+                else if (allowText) {
+                    await postText();
+                }
+                else if (allowImages) {
+                    await postImage();
                 }
             }
         }

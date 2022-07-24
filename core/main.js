@@ -205,8 +205,10 @@ async function main() {
                     // Add selected emoji to the used list
                     usedEmoji.push(reactionEmoji);
 
-                    // React to the message with the given emjoi
-                    await message.react(reactionEmoji);
+                    // React to the message with the given emoji
+                    setTimeout(async () => {
+                        await message.react(reactionEmoji);
+                    }, randomBetween((500 * reactCount), (500 * (reactCount + 1))));
 
                     ++reactCount;
                 } while (Math.random() < multiReactChance && reactCount < 20);
@@ -234,7 +236,9 @@ async function main() {
                     const shitpostMessage = await generateShitpostTextMessage(client, channel);
 
                     // Send the message
-                    channel.send(shitpostMessage);
+                    setTimeout(async () => {
+                        await channel.send(shitpostMessage);
+                    }, randomBetween(100, 1000));
 
                     // Log action
                     log("Shitpost", "Posted a message");
@@ -245,11 +249,13 @@ async function main() {
                     const shitpostImageUrl = await generateShitpostImageMessage(client, channel);
 
                     // Send the message
-                    channel.send({
-                        files: [
-                            shitpostImageUrl
-                        ]
-                    });
+                    setTimeout(async () => {
+                        channel.send({
+                            files: [
+                                shitpostImageUrl
+                            ]
+                        });
+                    }, randomBetween(100, 1000));
 
                     // Log action
                     log("Shitpost", "Posted an image");

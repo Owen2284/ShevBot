@@ -30,7 +30,7 @@ function buildConfig() {
             textToImageRatio: parseFloat(process.env.SHITPOST_TEXT_TO_IMAGE_RATIO),
             reactionImagePath: process.env.SHITPOST_REACTION_IMAGE_PATH,
             savePostedImageChance: parseFloat(process.env.SHITPOST_SAVE_POSTED_IMAGE_CHANCE),
-            allowedImageFileTypes: process.env.SHITPOST_ALLOWED_IMAGE_FILE_TYPES?.split(",") ?? []
+            allowedImageFileTypes: process.env.SHITPOST_ALLOWED_IMAGE_FILE_TYPES.split(",")
         }
     });
 }

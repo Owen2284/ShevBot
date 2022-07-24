@@ -1,4 +1,4 @@
-const { BlobServiceClient, StorageSharedKeyCredential } = require("@azure/storage-blob");
+const { BlobServiceClient, StorageSharedKeyCredential, BlobSASPermissions } = require("@azure/storage-blob");
 
 function getBlobServiceClient() {
     // Enter your storage account name
@@ -12,7 +12,7 @@ function getBlobServiceClient() {
     return blobServiceClient;
 }
 
-async function readBlobFile(path) {
+async function readBlobFileRaw(path) {
     // Get client
     const client = getBlobServiceClient();
 
@@ -23,11 +23,13 @@ async function readBlobFile(path) {
     // Get blob
     const blob = container.getBlobClient(path);
     const downloadBlockBlobResponse = await blob.download();
-    const downloaded = (
-        await streamToBuffer(downloadBlockBlobResponse.readableStreamBody)
-    ).toString();
+    const downloaded = await streamToBuffer(downloadBlockBlobResponse.readableStreamBody)
 
     return downloaded;
+}
+
+async function readBlobFile(path) {
+    return (await readBlobFileRaw(path)).toString();
 }
 
 // A helper method used to read a Node.js readable stream into a Buffer
@@ -59,7 +61,54 @@ async function writeBlobFile(path, content) {
     return response._response.status >= 200 && response._response.status <= 299;
 }
 
+async function getListOfFiles(path = "/") {
+    // Get client
+    const client = getBlobServiceClient();
+
+    // Get container
+    const containerName = process.env.BLOB_STORAGE_CONTAINER_NAME;
+    const container = client.getContainerClient(containerName);
+
+    // Get list of blobs
+    const recursion = async (subpath) => {
+        let subblobs = [];
+        for await (const item of container.listBlobsByHierarchy("/", { prefix: subpath })) {
+            if (item.kind === "prefix") {
+                const prefixBlobs = await recursion(item.name);
+                subblobs = [...subblobs, ...prefixBlobs];
+            } else {
+                subblobs.push(item);
+            }
+        }
+
+        return subblobs;
+    }
+
+    const blobs = await recursion(path);
+    return blobs;
+}
+
+async function getFileUrl(path, expiryMinutes = 1) {
+    // Get client
+    const client = getBlobServiceClient();
+
+    // Get container
+    const containerName = process.env.BLOB_STORAGE_CONTAINER_NAME;
+    const container = client.getContainerClient(containerName);
+
+    // Get block blob 
+    const blob = container.getBlockBlobClient(path);
+    const url = await blob.generateSasUrl({
+        expiresOn: new Date(new Date().getTime() + (60 * 1000 * expiryMinutes)),
+        permissions: BlobSASPermissions.parse("r")
+    });
+
+    return url;
+}
+
 module.exports = {
     readBlobFile,
-    writeBlobFile
+    writeBlobFile,
+    getListOfFiles,
+    getFileUrl
 }

@@ -19,10 +19,19 @@ const EmojiList = require("emojis-list");
 const Handlebars = require("handlebars");
 const { randomBetween } = require('./utilities/random');
 
+const { readFile, writeFile } = require("./utilities/file");
+const { getDateString, getTimeString } = require("./utilities/datetime");
+
+const debugFileName = getDateString().replace("/", "-").replace("/", "-").replace("/", "-").replace("/", "-");
+
+writeFile(`./errors/launch${debugFileName}Initial.txt`, "test");
+
 async function main() {
     // Creating config object
     dotenv.config();
     const config = buildConfig();
+
+    writeFile(`./errors/launch${debugFileName}Config.txt`, "test");
 
     // Set up app insights logging
     let telemetryClient = null;
@@ -33,6 +42,8 @@ async function main() {
 
         log("Boot", "Telemetry client initialised.");
     }
+
+    writeFile(`./errors/launch${debugFileName}AppInsights.txt`, "test");
 
     // Load in bot commands
     const commands = loadCommands();
@@ -55,6 +66,8 @@ async function main() {
             Discord.Partials.Reaction
         ]
     });
+
+    writeFile(`./errors/launch${debugFileName}Client1.txt`, "test");
 
     // Mount additional details onto client
     client.config = config;
@@ -375,6 +388,7 @@ async function main() {
     // Activate the bot.
     try {
         await client.login(process.env.BOT_TOKEN);
+        writeFile(`./errors/launch${debugFileName}LogIn.txt`, "test");
         log("Boot", "Bot logged in.");
     } catch (e) {
         error(e);
@@ -439,4 +453,6 @@ async function main() {
     }
 }
 
+writeFile(`./errors/launch${debugFileName}BeforeMain.txt`, "test");
 main();
+writeFile(`./errors/launch${debugFileName}AfterMain.txt`, "test");

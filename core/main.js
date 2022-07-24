@@ -37,7 +37,7 @@ async function main() {
     const commands = loadCommands();
 
     // Creating bot client.
-    const client = new Discord.Client();
+    const client = new Discord.Client({ intents: [Discord.GatewayIntentBits.Guilds, Discord.GatewayIntentBits.DirectMessages] });
 
     // Mount additional details onto client
     client.config = config;
@@ -69,7 +69,7 @@ async function main() {
     });
 
     // Shitpost interval
-    client.setInterval(() => {
+    setInterval(async () => {
         // Return early if no channels
         const channels = client.channels.cache.filter(() => true);
         if (!channels.size) {
@@ -77,7 +77,7 @@ async function main() {
         }
 
         // Find most recently checked channel
-        const wordDictionary = getShitpostWordDictionary();
+        const wordDictionary = await getShitpostWordDictionary();
         let targetChannelId = 0;
         let newestCheckTime = 0;
         for (let channelId in wordDictionary.channels) {
@@ -94,8 +94,8 @@ async function main() {
         }
 
         // Find channel, and try to send shitpost
-        const targetChannel = client.channels.cache.filter((channel) => channel.id === targetChannelId).array()[0];
-        shitpostProtocol(targetChannel);
+        const targetChannel = client.channels.cache.filter((channel) => channel.id === targetChannelId).first();
+        await shitpostProtocol(targetChannel, true, false);
 
     }, config.shitpost.randomSentenceTryInterval);
 
@@ -169,14 +169,18 @@ async function main() {
         }
     }
 
-    async function shitpostProtocol(channel) {
+    async function shitpostProtocol(channel, allowText = true, allowImages = true) {
+        if (!allowText && !allowImages) {
+            return;
+        }
+
         try {
             const initialShitpostChance = config.shitpost.initialShitpostChance;
             const textToImageRatio = config.shitpost.textToImageRatio;
 
             // Run the random check to see if there will be a shitpost
             if (Math.random() < initialShitpostChance) {
-                if (Math.random() < textToImageRatio) {
+                const postText = async () => {
                     // Generate thet text message
                     const shitpostMessage = await generateShitpostTextMessage(client, channel);
 
@@ -186,7 +190,8 @@ async function main() {
                     // Log action
                     log("Shitpost", "Posted a message");
                 }
-                else {
+
+                const postImage = async () => {
                     // Generate the image path
                     const shitpostImageUrl = await generateShitpostImageMessage(client, channel);
 
@@ -199,6 +204,21 @@ async function main() {
 
                     // Log action
                     log("Shitpost", "Posted an image");
+                }
+
+                if (allowText && allowImages) {
+                    if (Math.random() < textToImageRatio) {
+                        await postText();
+                    }
+                    else {
+                        await postImage();
+                    }
+                }
+                else if (allowText) {
+                    await postText();
+                }
+                else if (allowImages) {
+                    await postImage();
                 }
             }
         }

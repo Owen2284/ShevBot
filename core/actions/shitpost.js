@@ -1,4 +1,5 @@
-const { readBlobFile, writeBlobFile } = require("./../utilities/blob");
+const { randomBetween } = require("./../utilities/random");
+const { readBlobFile, writeBlobFile, getListOfFiles, getFileUrl } = require("./../utilities/blob");
 
 // Example empty dictionary
 // {
@@ -400,7 +401,7 @@ function generateShitpostSentence(client, weightedDictionary) {
     return sentence;
 }
 
-async function generateShitpostMessage(client, channel) {
+async function generateShitpostTextMessage(client, channel) {
     // Fetch the most recent 100 messages from the channel
     const previousMessages = await channel.messages.fetch({ limit: 100 });
 
@@ -427,6 +428,59 @@ async function generateShitpostMessage(client, channel) {
     return joinedSentences;
 }
 
+async function updateReactionImageLibrary(client, messageBatch) {
+    // Run through the message batch
+    for (let [_, message] of messageBatch) {
+        // Ignore message if it doesn't have attachments, or if it was written by a bot
+        if (!message.attachments || !message.attachments.length || message.author.bot) {
+            continue;
+        }
+
+        // If random chance failed, ignore
+        if (Math.random() >= client.config.shitpost.savePostedImageChance) {
+            continue;
+        }
+
+        // Get first image file from message
+        const attachmentToSave = message.attachments[0]
+
+        // If image is spoilered, ignore it
+        if (attachmentToSave.spoiler) {
+            continue;
+        }
+
+        const url = attachmentToSave.url;
+
+        // Check it's an allowed image
+        if (client.config.shitpost.allowedImageFileTypes.contains(url)) {
+            continue;
+        }
+
+        // Upload to blob storage
+        // TODO
+    }
+}
+
+async function selectRandomReactionImageUrl(client) {
+    const blobs = await getListOfFiles(client.config.shitpost.reactionImagePath);
+    const index = randomBetween(0, blobs.length);
+    const selectedBlob = blobs[index];
+
+    var url = getFileUrl(selectedBlob.name);
+    return url;
+}
+
+async function generateShitpostImageMessage(client, channel) {
+    // Loop through recently posted images, and update library
+    const previousMessages = await channel.messages.fetch({ limit: 100 });
+    updateReactionImageLibrary(client, previousMessages);
+
+    // Select a random image from blob storage
+    const url = await selectRandomReactionImageUrl(client);
+
+    return url;
+}
+
 module.exports = {
     getShitpostWordDictionary,
     updateShitpostDictionary,
@@ -434,5 +488,6 @@ module.exports = {
     addMessageToShitpostWordDictionary,
     createWeightedShitpostDictionary,
     generateShitpostSentence,
-    generateShitpostMessage
+    generateShitpostTextMessage,
+    generateShitpostImageMessage
 };

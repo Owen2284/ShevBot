@@ -19,9 +19,6 @@ const EmojiList = require("emojis-list");
 const Handlebars = require("handlebars");
 const { randomBetween } = require('./utilities/random');
 
-const { readFile, writeFile } = require("./utilities/file");
-const { getDateString, getTimeString } = require("./utilities/datetime");
-
 const debugFileName = getDateString().replace("/", "-").replace("/", "-").replace("/", "-").replace("/", "-");
 
 writeFile(`./errors/launch${debugFileName}Initial.txt`, "test");

@@ -6,7 +6,8 @@ const { readFile, writeFile } = require("./utilities/file");
 const { getDateString, getTimeString } = require("./utilities/datetime");
 const {
     getShitpostWordDictionary,
-    generateShitpostMessage
+    generateShitpostTextMessage,
+    generateShitpostImageMessage
 } = require("./actions/shitpost");
 
 const fs = require("fs");
@@ -171,16 +172,34 @@ async function main() {
     async function shitpostProtocol(channel) {
         try {
             const initialShitpostChance = config.shitpost.initialShitpostChance;
+            const textToImageRatio = config.shitpost.textToImageRatio;
 
             // Run the random check to see if there will be a shitpost
             if (Math.random() < initialShitpostChance) {
-                const shitpostMessage = await generateShitpostMessage(client, channel);
+                if (Math.random() < textToImageRatio) {
+                    // Generate thet text message
+                    const shitpostMessage = await generateShitpostTextMessage(client, channel);
 
-                // Send the message
-                channel.send(shitpostMessage);
+                    // Send the message
+                    channel.send(shitpostMessage);
 
-                // Log action
-                log("Shitpost", "Posted a message");
+                    // Log action
+                    log("Shitpost", "Posted a message");
+                }
+                else {
+                    // Generate the image path
+                    const shitpostImageUrl = await generateShitpostImageMessage(client, channel);
+
+                    // Send the message
+                    channel.send({
+                        files: [
+                            shitpostImageUrl
+                        ]
+                    });
+
+                    // Log action
+                    log("Shitpost", "Posted an image");
+                }
             }
         }
         catch (e) {
@@ -296,7 +315,7 @@ async function main() {
 
     // Activate the bot.
     try {
-        client.login(process.env.BOT_TOKEN);
+        await client.login(process.env.BOT_TOKEN);
         log("Boot", "Bot logged in.");
     } catch (e) {
         error(e);

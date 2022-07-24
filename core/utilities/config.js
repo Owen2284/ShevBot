@@ -18,14 +18,19 @@ function buildConfig() {
         reactions: {
             initialReactChance: parseFloat(process.env.REACTION_INITIAL_CHANCE),
             multiReactChance: parseFloat(process.env.REACTION_MULTI_CHANCE),
-            guildEmojiChance: parseFloat(process.env.REACTION_GUILD_EMOJI_CHANCE)
+            guildEmojiChance: parseFloat(process.env.REACTION_GUILD_EMOJI_CHANCE),
+            joinInReactChance: parseFloat(process.env.REACTION_JOIN_IN_CHANCE)
         },
         shitpost: {
             initialShitpostChance: parseFloat(process.env.SHITPOST_INITIAL_CHANCE),
             atypicalFollowUpChance: parseFloat(process.env.SHITPOST_ATYPICAL_FOLLOWUP_CHANCE),
             maxSentenceLength: parseInt(process.env.SHITPOST_MAX_SENTENCE_LENGTH),
             maxSentenceCount: parseInt(process.env.SHITPOST_MAX_SENTENCE_COUNT),
-            randomSentenceTryInterval: parseInt(process.env.SHITPOST_RANDOM_SENTENCE_TRY_INTERVAL)
+            randomSentenceTryInterval: parseInt(process.env.SHITPOST_RANDOM_SENTENCE_TRY_INTERVAL),
+            textToImageRatio: parseFloat(process.env.SHITPOST_TEXT_TO_IMAGE_RATIO),
+            reactionImagePath: process.env.SHITPOST_REACTION_IMAGE_PATH,
+            savePostedImageChance: parseFloat(process.env.SHITPOST_SAVE_POSTED_IMAGE_CHANCE),
+            allowedImageFileTypes: process.env.SHITPOST_ALLOWED_IMAGE_FILE_TYPES?.split(",") ?? []
         }
     });
 }

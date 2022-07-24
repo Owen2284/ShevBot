@@ -6,6 +6,7 @@
   "dependencies": {
     "@azure/storage-blob": "^12.8.0",
     "applicationinsights": "^1.8.10",
+    "axios": "^0.27.2",
     "discord.js": "^12.5.1",
     "dotenv": "^8.2.0",
     "emojis-list": "^3.0.0",

@@ -1,4 +1,8 @@
-const { readBlobFile, writeBlobFile } = require("./../utilities/blob");
+const { randomBetween } = require("./../utilities/random");
+const { readBlobFile, writeBlobFile, getListOfFiles, getFileUrl } = require("./../utilities/blob");
+
+const path = require('path');
+const axios = require('axios');
 
 // Example empty dictionary
 // {
@@ -400,7 +404,7 @@ function generateShitpostSentence(client, weightedDictionary) {
     return sentence;
 }
 
-async function generateShitpostMessage(client, channel) {
+async function generateShitpostTextMessage(client, channel) {
     // Fetch the most recent 100 messages from the channel
     const previousMessages = await channel.messages.fetch({ limit: 100 });
 
@@ -427,6 +431,84 @@ async function generateShitpostMessage(client, channel) {
     return joinedSentences;
 }
 
+async function updateReactionImageLibrary(client, messageBatch) {
+    // Run through the message batch
+    for (let [_, message] of messageBatch) {
+        // Ignore message if written by a bot
+        if (message.author.bot) {
+            continue;
+        }
+
+        // If random chance failed, ignore
+        if (Math.random() >= client.config.shitpost.savePostedImageChance) {
+            continue;
+        }
+
+        // Handle attachments if they are present
+        if (message.attachments && message.attachments.size) {
+            // Get first image file from message
+            const attachmentToSave = message.attachments.values().next().value
+
+            // If image is spoilered, ignore it
+            if (attachmentToSave.spoiler) {
+                continue;
+            }
+
+            const { name, url } = attachmentToSave;
+            const extension = path.extname(name).replace(".", "");
+
+            // Check it's an allowed image
+            if (client.config.shitpost.allowedImageFileTypes.indexOf(extension) === -1) {
+                continue;
+            }
+
+            // Get file from Discord URL
+            const response = await axios.get(url, {
+                responseType: 'arraybuffer'
+            });
+            const { status, data } = response;
+
+            if (status !== 200) {
+                continue;
+            }
+
+            // Upload to blob storage
+            const root = client.config.shitpost.reactionImagePath;
+            const success = await writeBlobFile(`${root.endsWith("/") ? root : `${root}/`}saved/${message.id}_${name}`, data);
+            if (!success) throw "writeBlobFile returned useuccessful status";
+
+            // TODO: Logs
+        }
+        // Handle embeds if they are present
+        else if (message.embeds && message.embeds.length) {
+            // Get first image file from message
+            const embedToSave = message.embeds[0];
+
+            // TODO: Check if Tenor, and if so, scrape gif off of page
+        }
+    }
+}
+
+async function selectRandomReactionImageUrl(client) {
+    const blobs = await getListOfFiles(client.config.shitpost.reactionImagePath);
+    const index = randomBetween(0, blobs.length);
+    const selectedBlob = blobs[index];
+
+    var url = getFileUrl(selectedBlob.name);
+    return url;
+}
+
+async function generateShitpostImageMessage(client, channel) {
+    // Loop through recently posted images, and update library
+    const previousMessages = await channel.messages.fetch({ limit: 100 });
+    await updateReactionImageLibrary(client, previousMessages);
+
+    // Select a random image from blob storage
+    const url = await selectRandomReactionImageUrl(client);
+
+    return url;
+}
+
 module.exports = {
     getShitpostWordDictionary,
     updateShitpostDictionary,
@@ -434,5 +516,6 @@ module.exports = {
     addMessageToShitpostWordDictionary,
     createWeightedShitpostDictionary,
     generateShitpostSentence,
-    generateShitpostMessage
+    generateShitpostTextMessage,
+    generateShitpostImageMessage
 };
